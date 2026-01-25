@@ -76,7 +76,7 @@ TechZone/
 ### Pasos
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/TU_USUARIO/TechZone.git
+    git clone https://github.com/ArbizuAldoAlberto/TechZone-E-commerce.git
     ```
 
 2.  **Instalar dependencias:**
