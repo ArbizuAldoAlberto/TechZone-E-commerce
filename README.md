@@ -39,7 +39,7 @@ La aplicación permite a los usuarios navegar por un catálogo de productos tecn
 
 | Autenticación | Home & Catálogo | Carrito & Checkout | Perfil & Mapa |
 |:---:|:---:|:---:|:---:|
-| ![Login](https://via.placeholder.com/200x400?text=Login) | ![Home](https://via.placeholder.com/200x400?text=Home) | ![Cart](https://via.placeholder.com/200x400?text=Cart) | ![Profile](https://via.placeholder.com/200x400?text=Profile) |
+| ![Login](./assets/screenshots/login-screen.png) | ![Home](./assets/screenshots/home-screen.png) | ![Product](./assets/screenshots/product-detail.png) | ![Profile](./assets/screenshots/profile-screen.png) |
 
 ---
 

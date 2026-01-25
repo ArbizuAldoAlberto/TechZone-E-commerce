@@ -3,7 +3,7 @@ import { initializeAuth, getReactNativePersistence, getAuth, browserLocalPersist
 import { getFirestore } from 'firebase/firestore'; // Database
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Storage for persistence
 import { Platform } from 'react-native';
-import { Platform } from 'react-native';
+
 
 // Firebase configuration
 // TODO: Replace with actual project values from Firebase Console
