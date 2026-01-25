@@ -1,128 +1,129 @@
-# TechZone - Premium E-commerce Mobile Application
+# TechZone 📱
 
-![React Native](https://img.shields.io/badge/React_Native-0.81.5-blue?logo=react)
-![Expo](https://img.shields.io/badge/Expo-54-000020?logo=expo)
-![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-2.11-764ABC?logo=redux)
-![SQLite](https://img.shields.io/badge/SQLite-Offline_First-003B57?logo=sqlite)
-![Firebase](https://img.shields.io/badge/Firebase-Auth_%2B_Realtime_DB-FFCA28?logo=firebase)
-![Clean Architecture](https://img.shields.io/badge/Architecture-Clean_%26_Scalable-success)
+<div align="center">
 
-TechZone is a robust, professional **Offline-First** E-commerce application built with React Native and Expo. Developed with a **Senior Architecture** approach, it prioritizes scalability, offline synchronization, and a premium user experience.
+  ![Banner](./assets/techzone-banner.png)
 
----
 
-## 🚀 Key Features
+  **Tu destino definitivo para la tecnología móvil.**
+  
+  [![Expo](https://img.shields.io/badge/Expo-sdk__52-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev)
+  [![React Native](https://img.shields.io/badge/React_Native-v0.81-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev)
+  [![Redux Toolkit](https://img.shields.io/badge/Redux-Toolkit-593D88?style=for-the-badge&logo=redux&logoColor=white)](https://redux-toolkit.js.org)
+  [![Firebase](https://img.shields.io/badge/Firebase-Backend-039BE5?style=for-the-badge&logo=Firebase&logoColor=white)](https://firebase.google.com)
+  [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 
-### 🌟 Advanced User Experience
-- **Interactive Map Selection**: Users can precisely pinpoint their delivery location using a draggable pin map interface.
-- **Dark/Light Theme**: System-wide theme toggle with smooth transitions.
-- **Dynamic Shop**: Category-based filtering powered by **Firebase Realtime Database**.
-- **Real-Time Validation**: Instant feedback on forms using **React Hook Form + Yup**.
-
-### ⚡ Performance & Reliability
-- **Offline-First Architecture**: Add products to cart without internet - syncs automatically when connection recovers.
-- **Session Persistence**: SQLite auto-login on app restart.
-- **Optimistic Updates**: UI updates immediately while data syncs in the background.
-
-### 📱 Device Integration
-- **Camera + Gallery**: Profile photo management with automatic image compression (`expo-image-manipulator`).
-- **Location Services**: GPS tracking with reverse geocoding to auto-fill addresses.
+</div>
 
 ---
 
-## 🏗️ Clean Project Architecture
+## 🚀 Sobre el Proyecto
 
-The project follows a modular, feature-based structure designed for maintainability:
+**TechZone** es una aplicación de E-commerce moderna y robusta, desarrollada como proyecto final para el curso "Desarrollo de Aplicaciones" en Coderhouse. 
 
-```
+La aplicación permite a los usuarios navegar por un catálogo de productos tecnológicos, gestionar un carrito de compras persistente, realizar pedidos y gestionar su perfil de usuario con integración de hardware nativo.
+
+### 🌟 Features Principales
+
+| Módulo | Descripción |
+| :--- | :--- |
+| **🔐 Autenticación** | Flujo completo de Login/Registro con Firebase Auth. Manejo de sesiones persistentes. |
+| **� Shop & Orders** | Catálogo de productos con categorías, Detalle de Producto, Carrito de Compras (Redux) e historial de Órdenes. |
+| **� Persistencia** | Base de datos local SQLite para guardar sesiones y preferencias del usuario offline. |
+| **📍 Location Services** | Integración con mapas para visualizar y confirmar la dirección de envío del usuario. |
+| **📸 Perfil Multimedia** | Selector de imágenes nativo para que el usuario suba o tome una foto de perfil. |
+
+---
+
+## 📸 Galería de Pantallas
+
+| Autenticación | Home & Catálogo | Carrito & Checkout | Perfil & Mapa |
+|:---:|:---:|:---:|:---:|
+| ![Login](https://via.placeholder.com/200x400?text=Login) | ![Home](https://via.placeholder.com/200x400?text=Home) | ![Cart](https://via.placeholder.com/200x400?text=Cart) | ![Profile](https://via.placeholder.com/200x400?text=Profile) |
+
+---
+
+## 🏗️ Arquitectura del Proyecto
+
+El proyecto sigue una estructura profesional y escalable:
+
+```bash
 TechZone/
-├── App.js                    # Entry point & DB Initialization
-├── src/
-│   ├── app/                  # App-wide logic (SyncManager)
-│   ├── components/           # Reusable UI (Atomic Design)
-│   │   ├── common/           # Buttons, Inputs, Alerts
-│   │   └── profile/          # Feature-specific components (LocationPicker)
-│   ├── db/                   # SQLite persistence layer
-│   ├── global/               # Design tokens (colors, fonts)
-│   ├── hooks/                # Custom Logic Hooks (useImagePicker, useUserLocation)
-│   ├── navigation/           # Navigation Stacks & Tabs
-│   ├── screens/              # View Layer (Profile, Auth, Shop)
-│   ├── services/             # API & Business Logic (RTK Query)
-│   ├── store/                # Global State (Redux Slices)
-│   └── utils/                # Helpers & Validators (Yup Schemas)
+├── 📂 src/
+│   ├── 📂 app/             # Configuración del store (Redux)
+│   ├── 📂 components/      # UI Kit reutilizable (Input, Button, Cards)
+│   ├── 📂 db/              # Capa de persistencia local (SQLite)
+│   ├── 📂 firebase/        # Configuración de base de datos remota
+│   ├── 📂 global/          # Fuentes y estilos globales
+│   ├── 📂 hooks/           # Custom Hooks
+│   ├── 📂 navigation/      # Stacks (Auth, Shop) y Tabs (Main)
+│   ├── 📂 screens/         # Vistas: Auth, Cart, Home, Orders, ProductDetail, Profile
+│   ├── 📂 services/        # API Calls (RTK Query para Firebase)
+│   └── 📂 utils/           # Funciones auxiliares y validaciones
+├── 📄 App.js               # Entry Point
+├── 📄 app.json             # Configuración de Expo, Permisos y Plugins
+└── 📄 package.json         # Dependencias
 ```
 
 ---
 
-## 🔄 Offline-First Synchronization Flow
+## ⚙️ Instalación (Developer Guide)
 
-```mermaid
-graph LR
-    User[User Action] --> Redux[Redux Store]
-    Redux --> UI[Update UI]
-    Redux --> Check{Online?}
-    Check -->|Yes| Firebase[Firebase DB]
-    Check -->|No| SQLite[SQLite (Pending Queue)]
-    SQLite --> Sync[SyncManager]
-    Sync -->|Connection Restored| Firebase
-```
+### Prerrequisitos
+- Node.js & npm
+- Expo Go (Móvil) o Emulador Android/iOS
 
----
+### Pasos
+1.  **Clonar el repositorio:**
+    ```bash
+    git clone https://github.com/TU_USUARIO/TechZone.git
+    ```
 
-## 🛠️ Installation & Setup
+2.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
 
-### Prerequisites
-- Node.js (LTS)
-- Expo CLI & EAS CLI
+3.  **Configurar Variables de Entorno:**
+    Crea un archivo `.env` copiando el template incluído:
+    ```bash
+    cp .env.example .env
+    ```
+    *Rellena las claves con tu configuración de Firebase Console.*
 
-### Quick Start
-
-1. **Clone & Install**
-   ```bash
-   git clone <repository-url>
-   cd TechZone
-   npm install
-   ```
-
-2. **Environment Configuration**
-   Create `.env` in the root directory:
-   ```env
-   EXPO_PUBLIC_FIREBASE_URL=https://your-project.firebaseio.com/
-   EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
-   ...
-   ```
-
-3. **Run the App**
-   ```bash
-   npx expo start
-   ```
+4.  **Iniciar la App:**
+    ```bash
+    npx expo start
+    ```
 
 ---
 
-## 📦 Deep Tech Stack
+## 🗺️ Roadmap & Futuras Mejoras
 
-| Category | Technology |
-|----------|------------|
-| **Core** | React Native 0.81.5, Expo 54, React 19 |
-| **State** | Redux Toolkit, RTK Query |
-| **Persistence** | expo-sqlite (ACID), AsyncStorage |
-| **Backend** | Firebase Auth (REST), Realtime Database |
-| **Maps** | react-native-maps, expo-location |
-| **Forms** | React Hook Form, Yup Validation |
-| **UI/UX** | React Native Animated, Vector Icons |
+- [x] **MVP:** Catálogo, Carrito, Auth, SQLite, Maps, Camera.
+- [ ] **Pagos:** Integración con MercadoPago / Stripe.
+- [ ] **Notificaciones:** Push Notifications para estado de órdenes.
+- [ ] **Admin:** Panel web para gestión de productos.
 
 ---
 
-## ✅ Recent Enhancements (v1.1)
+## 🤝 Contributing
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| **Smart Location** | Interactive map modal for precise address selection | ✅ |
-| **Clean Hooks** | Extracted logic: `useImagePicker`, `useUserLocation` | ✅ |
-| **Robust Auth** | Centralized validation schemas for Login/Register | ✅ |
-| **Map Upgrade** | Migrated from static images to `react-native-maps` | ✅ |
+1.  Fork del repositorio.
+2.  Crea tu rama (`git checkout -b feature/AmazingFeature`).
+3.  Commit de tus cambios (`git commit -m 'Add some AmazingFeature'`).
+4.  Push a la rama (`git push origin feature/AmazingFeature`).
+5.  Abre un Pull Request.
 
 ---
 
-## 📄 License
-MIT License. **Made with ❤️ using React Native & Expo**
+## 📝 Licencia
+
+Distribuido bajo la Licencia [MIT](LICENSE).
+
+---
+<div align="center">
+  <p>Desarrollado por <b>Aldo Arbizu</b> para <b>Coderhouse</b> - 2026</p>
+</div>
+
+---

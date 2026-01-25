@@ -10,7 +10,6 @@ import {
     Platform,
     Switch,
     Animated,
-    Dimensions,
     StatusBar,
     ActivityIndicator,
     useWindowDimensions
@@ -32,6 +31,14 @@ import { useImagePicker } from '../../hooks/useImagePicker';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import LocationPickerModal from '../../components/profile/LocationPickerModal';
 
+/**
+ * @component Profile
+ * @description Main profile screen component.
+ * Handles user identity verification, profile image management, and location services.
+ * Features a Quick Actions grid for rapid navigation to Orders, Wishlist, and Settings.
+ *
+ * @returns {JSX.Element} The rendered Profile screen.
+ */
 const Profile = () => {
     const dispatch = useDispatch();
     const navigation = useNavigation();
@@ -203,7 +210,14 @@ const Profile = () => {
 
     const dynamicStyles = getDynamicStyles(isDarkMode, themeColors);
     const { width } = useWindowDimensions();
-    const cardWidth = (width - 40 - 12) / 2;
+
+    // Responsive Layout Logic
+    const isWebDesktop = width > 768;
+    const containerWidth = Math.min(width, 800); // 800 is maxWidth from webContainer
+    const horizontalPadding = 20;
+    const gap = 12;
+    const numColumns = isWebDesktop ? 4 : 2;
+    const cardWidth = (containerWidth - (horizontalPadding * 2) - (gap * (numColumns - 1))) / numColumns;
 
     return (
         <SafeAreaView style={[styles.container, dynamicStyles.container]} edges={['top']}>
@@ -610,6 +624,8 @@ const getDynamicStyles = (isDarkMode, themeColors) => StyleSheet.create({
     },
     card: {
         backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
+        borderWidth: 1,
+        borderColor: isDarkMode ? '#2C2C2E' : '#F2F2F7',
     },
     heroCard: {
         backgroundColor: isDarkMode ? '#1C1C1E' : '#FFFFFF',
@@ -856,21 +872,23 @@ const styles = StyleSheet.create({
     },
     quickActionCard: {
         // Width is handled dynamically using style prop
-        padding: 16,
-        borderRadius: 20,
+        padding: 20,
+        borderRadius: 24,
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
         ...Platform.select({
             ios: {
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
             },
             android: {
-                elevation: 3,
+                elevation: 4,
             },
             web: {
-                boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.05)',
+                boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.08)',
             }
         }),
     },
@@ -881,16 +899,17 @@ const styles = StyleSheet.create({
         maxWidth: 800,
     },
     quickActionIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 16,
+        width: 56,
+        height: 56,
+        borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 10,
+        marginBottom: 4,
     },
     quickActionLabel: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '600',
+        letterSpacing: -0.3,
     },
     locationCard: {
         borderRadius: 24,
