@@ -1,19 +1,22 @@
+/**
+ * @fileoverview Login Screen
+ * @description Authentication entry point. Supports email/password login and demo mode.
+ * Persists session locally (SQLite) and globally (Redux).
+ */
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { setUser } from '../../store/authSlice';
 import { insertSession } from '../../db';
 import { signIn } from '../../services/authService';
 import { colors } from '../../global/colors';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import InputField from '../../components/common/InputField';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
-
-// Validation schema imported
 import { loginSchema } from '../../utils/validationSchemas';
 
 const Auth = ({ navigation }) => {
@@ -24,17 +27,13 @@ const Auth = ({ navigation }) => {
 
     const { control, handleSubmit, formState: { errors, isValid } } = useForm({
         resolver: yupResolver(loginSchema),
-        mode: 'onChange', // Real-time validation
-        defaultValues: {
-            email: '',
-            password: '',
-        }
+        mode: 'onChange',
+        defaultValues: { email: '', password: '' }
     });
 
     const onSubmit = async (data) => {
         setIsLoading(true);
         try {
-            // Call Firebase Auth SDK
             const user = await signIn(data.email, data.password);
             dispatch(setUser(user));
             await insertSession(user);
@@ -50,8 +49,8 @@ const Auth = ({ navigation }) => {
         dispatch(setUser(user));
         try {
             await insertSession(user);
-        } catch (error) {
-            // Continue even if session save fails
+        } catch {
+            // Silently fail session save for demo
         }
     };
 
@@ -79,7 +78,6 @@ const Auth = ({ navigation }) => {
                                 Log in to access your dashboard and shop the latest tech.
                             </Text>
 
-                            {/* Email Input */}
                             <Controller
                                 control={control}
                                 name="email"
@@ -98,7 +96,6 @@ const Auth = ({ navigation }) => {
                                 )}
                             />
 
-                            {/* Password Input */}
                             <Controller
                                 control={control}
                                 name="password"
@@ -125,7 +122,6 @@ const Auth = ({ navigation }) => {
                                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                             </TouchableOpacity>
 
-                            {/* Login Button */}
                             <TouchableOpacity
                                 style={[styles.loginButton, (!isValid || isLoading) && styles.loginButtonDisabled]}
                                 onPress={handleSubmit(onSubmit)}
@@ -137,12 +133,10 @@ const Auth = ({ navigation }) => {
                                 {!isLoading && <Ionicons name="arrow-forward" size={20} color={colors.white} />}
                             </TouchableOpacity>
 
-                            {/* Demo Button */}
                             <TouchableOpacity style={styles.demoButton} onPress={handleDemoLogin}>
                                 <Text style={styles.demoButtonText}>Enter as Demo User</Text>
                             </TouchableOpacity>
 
-                            {/* Register Section */}
                             <View style={styles.registerSection}>
                                 <View style={styles.registerDivider} />
                                 <Text style={styles.registerPromptText}>New to TechZone?</Text>
@@ -169,9 +163,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.primary,
     },
-    keyboardView: {
-        flex: 1,
-    },
+    keyboardView: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
         ...(Platform.OS === 'web' && {
@@ -218,21 +210,7 @@ const styles = StyleSheet.create({
         padding: 30,
         paddingTop: 40,
         ...(Platform.OS === 'web' && {
-            // Platform-specific shadows
-            ...Platform.select({
-                ios: {
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 10 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 30,
-                },
-                android: {
-                    elevation: 10,
-                },
-                web: {
-                    boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.15)',
-                }
-            }),
+            boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.15)',
         }),
     },
     welcomeText: {
@@ -271,17 +249,11 @@ const styles = StyleSheet.create({
                 shadowOpacity: 0.3,
                 shadowRadius: 10,
             },
-            android: {
-                elevation: 8,
-            },
-            web: {
-                boxShadow: `0px 4px 10px ${colors.primary}4D`,
-            }
+            android: { elevation: 8 },
+            web: { boxShadow: `0px 4px 10px ${colors.primary}4D` }
         })
     },
-    loginButtonDisabled: {
-        opacity: 0.6,
-    },
+    loginButtonDisabled: { opacity: 0.6 },
     loginButtonText: {
         color: colors.white,
         fontSize: 18,
@@ -338,19 +310,12 @@ const styles = StyleSheet.create({
                 shadowOpacity: 0.3,
                 shadowRadius: 10,
             },
-            android: {
-                elevation: 6,
-            },
+            android: { elevation: 6 },
         }),
     },
     registerButtonText: {
         color: colors.white,
         fontSize: 17,
-        fontWeight: '700',
-    },
-    linkText: {
-        color: colors.primary,
-        fontSize: 14,
         fontWeight: '700',
     },
 });

@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Orders Screen
+ * @description Displays a list of user's past orders.
+ * Features:
+ * - Fetches orders from Firebase via RTK Query
+ * - Pull-to-refresh functionality
+ * - Offline/Empty state handling
+ */
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, FlatList, ActivityIndicator, StatusBar, Platform } from 'react-native';
 import { colors, getColors } from '../../global/colors';
@@ -9,7 +17,7 @@ import { useSelector } from 'react-redux';
 const Orders = () => {
     const { localId } = useSelector(state => state.auth);
     const isDarkMode = useSelector(state => state.theme.isDarkMode);
-    const { data: orders, isLoading, isError, refetch } = useGetOrdersQuery(localId || 'anonymous');
+    const { data: orders, isLoading, refetch } = useGetOrdersQuery(localId || 'anonymous');
 
     // Get dynamic colors based on theme
     const themeColors = getColors(isDarkMode);
@@ -100,7 +108,6 @@ const getDynamicStyles = (isDarkMode, themeColors) => StyleSheet.create({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        // Ensure background color is set to prevent transparent/white screen issues
     },
     loadingContainer: {
         flex: 1,

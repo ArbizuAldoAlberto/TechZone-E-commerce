@@ -1,14 +1,23 @@
+/**
+ * @fileoverview User Favorites/Wishlist State
+ * @description Manages products saved to user's wishlist.
+ * Synced to Firebase via userApi for cross-device persistence.
+ */
 import { createSlice } from '@reduxjs/toolkit';
 
 const favoritesSlice = createSlice({
     name: 'favorites',
     initialState: {
-        items: [], // Array of product IDs or objects
+        items: [],
     },
     reducers: {
+        /**
+         * @description Toggles product in favorites (add if not present, remove if exists).
+         * @param {Object} action.payload - Complete product object to toggle
+         */
         toggleFavorite: (state, action) => {
             const product = action.payload;
-            const index = state.items.findIndex(item => item.id === product.id);
+            const index = state.items.findIndex((item) => item.id === product.id);
             if (index >= 0) {
                 state.items.splice(index, 1);
             } else {

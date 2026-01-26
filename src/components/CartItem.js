@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Cart Item Component
+ * @description Renders a single item in the shopping cart.
+ * Features:
+ * - Displays product image, title, price, and quantity
+ * - Controls for incrementing/decrementing quantity
+ * - Remove item button
+ * - Pending sync status indicator for offline items
+ * - Web-compatible touch handling
+ */
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import { colors, getColors } from '../global/colors';

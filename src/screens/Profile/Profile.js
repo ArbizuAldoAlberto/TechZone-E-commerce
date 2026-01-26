@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Profile Screen
+ * @description Main profile screen component.
+ * Handles user identity verification, profile image management, and location services.
+ * Features a Quick Actions grid for rapid navigation to Orders, Wishlist, and Settings.
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
@@ -22,23 +28,15 @@ import MapView, { Marker, PROVIDER_DEFAULT } from '../../components/common/MapWr
 import { useDispatch, useSelector } from 'react-redux';
 import { setProfileImage, setUserLocation, clearUser } from '../../store/authSlice';
 import { toggleTheme } from '../../store/themeSlice';
-import { deleteSession } from '../../db';
+import { deleteSession, updateSession } from '../../db';
 import { useNavigation } from '@react-navigation/native';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
 
-import { useUpdateProfileImageMutation, useUpdateUserLocationMutation } from '../../services/userService';
+import { useUpdateProfileImageMutation, useUpdateUserLocationMutation, useUpdateThemePreferenceMutation } from '../../services/userService';
 import { useImagePicker } from '../../hooks/useImagePicker';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import LocationPickerModal from '../../components/profile/LocationPickerModal';
 
-/**
- * @component Profile
- * @description Main profile screen component.
- * Handles user identity verification, profile image management, and location services.
- * Features a Quick Actions grid for rapid navigation to Orders, Wishlist, and Settings.
- *
- * @returns {JSX.Element} The rendered Profile screen.
- */
 const Profile = () => {
     const dispatch = useDispatch();
     const navigation = useNavigation();
@@ -52,12 +50,13 @@ const Profile = () => {
     // Backend mutations
     const [triggerSaveImage] = useUpdateProfileImageMutation();
     const [triggerSaveLocation] = useUpdateUserLocationMutation();
+    const [triggerSaveTheme] = useUpdateThemePreferenceMutation();
 
     // CustomAlert hook
     const { alertConfig, showAlert, hideAlert } = useCustomAlert();
 
     // Custom Hooks
-    const { image, setImage, isCompressing, pickImage } = useImagePicker(reduxImage || 'https://i.pravatar.cc/300?img=11');
+    const { image, isCompressing, pickImage } = useImagePicker(reduxImage || 'https://i.pravatar.cc/300?img=11');
     const { location, address, isLocating, getUserLocation, setAddress, setLocation } = useUserLocation(reduxLocation);
 
     // Modal State
@@ -185,6 +184,19 @@ const Profile = () => {
         }, showAlert);
     };
 
+    const handleThemeToggle = async () => {
+        const newTheme = !isDarkMode;
+        dispatch(toggleTheme());
+
+        // Sync to Firebase (cloud - cross-device)
+        if (localId) {
+            triggerSaveTheme({ localId, themePreference: newTheme ? 'dark' : 'light' });
+        }
+
+        // Sync to SQLite (local - offline persistence)
+        await updateSession({ themePreference: newTheme ? 'dark' : 'light' });
+    };
+
     const onLogout = async () => {
         showAlert(
             '👋 Sign Out',
@@ -198,7 +210,7 @@ const Profile = () => {
                         try {
                             await deleteSession();
                             dispatch(clearUser());
-                        } catch (error) {
+                        } catch {
                             showAlert('Error', 'Could not sign out properly.', [{ text: 'OK' }], 'alert-circle-outline');
                         }
                     }
@@ -314,7 +326,6 @@ const Profile = () => {
                                                 {
                                                     text: 'Explorar',
                                                     onPress: () => {
-                                                        // Navigate to Shop tab, then reset/navigate to Home screen
                                                         navigation.navigate('Shop', { screen: 'Home' });
                                                     }
                                                 },
@@ -486,7 +497,7 @@ const Profile = () => {
                                 </View>
                                 <Switch
                                     value={isDarkMode}
-                                    onValueChange={() => dispatch(toggleTheme())}
+                                    onValueChange={handleThemeToggle}
                                     trackColor={{ false: '#E5E5EA', true: themeColors.primary }}
                                     thumbColor={colors.white}
                                     ios_backgroundColor="#E5E5EA"

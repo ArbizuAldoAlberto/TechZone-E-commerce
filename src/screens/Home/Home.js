@@ -1,9 +1,17 @@
+/**
+ * @fileoverview Home Screen (Shop)
+ * @description Main shopping interface with categories, product grid, search, and filtering.
+ * Features:
+ * - Dynamic columns based on screen width
+ * - Pull-to-refresh & skeleton loading
+ * - Search with debounce
+ * - Sorting & Filtering (Price/Rating)
+ * - Favorites integration
+ */
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, Image, ImageBackground, TouchableOpacity, FlatList, StatusBar, useWindowDimensions } from 'react-native';
 import { colors, getColors } from '../../global/colors';
-import { fonts } from '../../global/fonts';
 import { Ionicons } from '@expo/vector-icons';
-// import { newRelease } from '../../global/data';
 import ProductItem from '../../components/ProductItem';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useGetCategoriesQuery, useGetProductsQuery } from '../../services/shopService';
@@ -32,7 +40,6 @@ const Home = ({ navigation }) => {
     // Search state with debounce
     const [searchQuery, setSearchQuery] = useState('');
     const debouncedSearch = useDebounce(searchQuery, 300);
-    const [showFilterMenu, setShowFilterMenu] = useState(false);
 
     // Sort order state: 'none' | 'price_asc' | 'price_desc' | 'rating'
     const [sortOrder, setSortOrder] = useState('none');
@@ -66,11 +73,7 @@ const Home = ({ navigation }) => {
             case 'price_desc':
                 return [...productList].sort((a, b) => (b.price || 0) - (a.price || 0));
             case 'rating':
-                return [...productList].sort((a, b) => {
-                    const ratingA = a.rating || 0;
-                    const ratingB = b.rating || 0;
-                    return ratingB - ratingA;
-                });
+                return [...productList].sort((a, b) => (b.rating || 0) - (a.rating || 0)); // Simplified rating sort
             default:
                 return productList;
         }
@@ -151,7 +154,7 @@ const Home = ({ navigation }) => {
     const handleSeeAllPress = () => {
         dispatch(setCategorySelected(null));
         setSearchQuery('');
-        setSortOrder('none'); // Reset sort order too
+        setSortOrder('none');
     };
 
     // Dynamic styles based on theme
@@ -295,10 +298,8 @@ const Home = ({ navigation }) => {
                     style={styles.bannerContainer}
                     onPress={() => {
                         if (topFavorite) {
-                            // Navigate to top favorite product
                             navigation.navigate('ProductDetail', { product: topFavorite });
                         } else if (filteredProducts.length > 0) {
-                            // Navigate to first product in the list (New Release)
                             navigation.navigate('ProductDetail', { product: filteredProducts[0] });
                         }
                     }}

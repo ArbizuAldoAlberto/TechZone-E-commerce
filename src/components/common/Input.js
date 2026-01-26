@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Basic Input Component
+ * @description Simple text input with label and error display.
+ * @deprecated Consider using InputField.js which offers more features (icons, password toggle, etc).
+ */
 import React from 'react';
 import { View, TextInput, Text, StyleSheet } from 'react-native';
 import { colors } from '../../global/colors';

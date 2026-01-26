@@ -1,4 +1,10 @@
+/**
+ * @fileoverview Redux Store Configuration
+ * @description Centralizes all Redux slices and RTK Query APIs.
+ * Enables cache invalidation and automatic refetching via setupListeners.
+ */
 import { configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
 import { shopApi } from '../services/shopService';
 import { userApi } from '../services/userService';
 import shopReducer from './shopSlice';
@@ -7,7 +13,6 @@ import authReducer from './authSlice';
 import favoritesReducer from './favoritesSlice';
 import themeReducer from './themeSlice';
 import reviewsReducer from './reviewsSlice';
-import { setupListeners } from '@reduxjs/toolkit/query';
 
 export const store = configureStore({
     reducer: {

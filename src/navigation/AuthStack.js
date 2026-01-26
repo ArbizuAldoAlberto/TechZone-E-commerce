@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Authentication Navigation Stack
+ * @description Manages potential login, registration, and password reset screens.
+ */
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Auth from '../screens/Auth/Auth';

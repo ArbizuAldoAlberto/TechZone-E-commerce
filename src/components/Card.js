@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Card Component
+ * @description A generic styled card container.
+ * Features:
+ * - Consistent styling (shadows, border radius)
+ * - Optional favorite icon integration (coupled to Favorites Redux)
+ * - Platform-specific shadow implementation
+ */
 import React from 'react';
 import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { colors } from '../global/colors';

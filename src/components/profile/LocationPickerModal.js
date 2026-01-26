@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Location Picker Modal
+ * @description A modal component that allows users to select a location on a map.
+ * Features:
+ * - Uses a fixed center pin pattern (like Uber/Grab)
+ * - Reverse geocoding to get address from coordinates
+ * - confirmation button to return selected location
+ */
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from '../../components/common/MapWrapper';

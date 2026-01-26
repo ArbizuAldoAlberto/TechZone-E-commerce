@@ -1,6 +1,12 @@
-// Light theme (default)
+/**
+ * @fileoverview Theme Color Palettes
+ * @description Defines light and dark color schemes for consistent app theming.
+ * Use getColors(isDarkMode) to get the appropriate palette based on user preference.
+ */
+
+/** Light theme (default) */
 export const lightColors = {
-    primary: '#007AFF', // Tech Blue
+    primary: '#007AFF',
     darkBackground: '#1A1A1A',
     cardBackground: '#FFFFFF',
     text: '#1C1C1E',
@@ -14,9 +20,9 @@ export const lightColors = {
     border: '#E5E5EA',
 };
 
-// Dark theme
+/** Dark theme */
 export const darkColors = {
-    primary: '#0A84FF', // Brighter blue for dark mode
+    primary: '#0A84FF',
     darkBackground: '#000000',
     cardBackground: '#1C1C1E',
     text: '#FFFFFF',
@@ -30,14 +36,12 @@ export const darkColors = {
     border: '#38383A',
 };
 
-// Default export for backwards compatibility (light theme)
+/** Default export for backwards compatibility */
 export const colors = lightColors;
 
 /**
- * Get the appropriate color palette based on theme
- * @param {boolean} isDarkMode 
- * @returns {typeof lightColors}
+ * @description Returns color palette based on theme preference
+ * @param {boolean} isDarkMode - True for dark theme, false for light
+ * @returns {typeof lightColors} Color palette object
  */
-export const getColors = (isDarkMode) => {
-    return isDarkMode ? darkColors : lightColors;
-};
+export const getColors = (isDarkMode) => (isDarkMode ? darkColors : lightColors);

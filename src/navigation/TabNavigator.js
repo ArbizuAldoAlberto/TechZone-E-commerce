@@ -1,23 +1,28 @@
-import React, { useRef, useState, useCallback } from 'react';
-import { View, Platform, StyleSheet, Dimensions, Animated as RNAnimated } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+/**
+ * @fileoverview Main Bottom Tab Navigation
+ * @description Manages core app navigation (Home, Cart, Orders, Profile).
+ * Features a custom swipeable tab bar with animated indicators and badges.
+ */
+import React from 'react';
+import { View, Platform, StyleSheet, Animated as RNAnimated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import ShopStack from './ShopStack';
-import Cart from '../screens/Cart/Cart';
-import Orders from '../screens/Orders/Orders';
-import Profile from '../screens/Profile/Profile';
-import { colors, getColors } from '../global/colors';
 import { useSelector } from 'react-redux';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { TouchableOpacity } from 'react-native';
 
+import ShopStack from './ShopStack';
+import Cart from '../screens/Cart/Cart';
+import Orders from '../screens/Orders/Orders';
+import Profile from '../screens/Profile/Profile';
+import { colors, getColors } from '../global/colors';
+
 const TopTab = createMaterialTopTabNavigator();
 
 const TabNavigator = () => {
-    const isDarkMode = useSelector(state => state.theme.isDarkMode);
+    const isDarkMode = useSelector((state) => state.theme.isDarkMode);
     const themeColors = getColors(isDarkMode);
-    const cartItems = useSelector(state => state.cart.items);
+    const cartItems = useSelector((state) => state.cart.items);
     const insets = useSafeAreaInsets();
 
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -35,15 +40,17 @@ const TabNavigator = () => {
     // Custom tab bar component positioned at bottom
     const CustomTabBar = ({ state, descriptors, navigation }) => {
         return (
-            <View style={[
-                styles.tabBarContainer,
-                {
-                    backgroundColor: isDarkMode ? '#1C1C1E' : colors.white,
-                    borderTopColor: isDarkMode ? '#38383A' : '#E5E5EA',
-                    height: tabBarHeight,
-                    paddingBottom: bottomPadding,
-                }
-            ]}>
+            <View
+                style={[
+                    styles.tabBarContainer,
+                    {
+                        backgroundColor: isDarkMode ? '#1C1C1E' : colors.white,
+                        borderTopColor: isDarkMode ? '#38383A' : '#E5E5EA',
+                        height: tabBarHeight,
+                        paddingBottom: bottomPadding,
+                    },
+                ]}
+            >
                 {state.routes.map((route, index) => {
                     const { options } = descriptors[route.key];
                     const label = options.tabBarLabel || options.title || route.name;
@@ -61,7 +68,6 @@ const TabNavigator = () => {
                         }
                     };
 
-                    // Get icon based on route name
                     const getIcon = () => {
                         let iconName;
                         switch (route.name) {
@@ -97,19 +103,10 @@ const TabNavigator = () => {
                             activeOpacity={0.7}
                         >
                             <View style={styles.iconContainer}>
-                                <Ionicons
-                                    name={getIcon()}
-                                    size={24}
-                                    color={iconColor}
-                                />
-                                {/* Cart badge */}
+                                <Ionicons name={getIcon()} size={24} color={iconColor} />
                                 {route.name === 'Cart' && cartCount > 0 && (
                                     <View style={styles.badge}>
-                                        <Ionicons
-                                            name="cart"
-                                            size={10}
-                                            color={colors.white}
-                                        />
+                                        <Ionicons name="cart" size={10} color={colors.white} />
                                     </View>
                                 )}
                             </View>
@@ -134,9 +131,9 @@ const TabNavigator = () => {
             tabBarPosition="bottom"
             tabBar={(props) => <CustomTabBar {...props} />}
             screenOptions={{
-                swipeEnabled: true, // Enable swipe gestures
+                swipeEnabled: true,
                 animationEnabled: true,
-                lazy: true, // Lazy load screens
+                lazy: true,
                 lazyPreloadDistance: 1,
             }}
             initialRouteName="Shop"
@@ -144,30 +141,22 @@ const TabNavigator = () => {
             <TopTab.Screen
                 name="Shop"
                 component={ShopStack}
-                options={{
-                    tabBarLabel: 'Home',
-                }}
+                options={{ tabBarLabel: 'Home' }}
             />
             <TopTab.Screen
                 name="Cart"
                 component={Cart}
-                options={{
-                    tabBarLabel: 'Cart',
-                }}
+                options={{ tabBarLabel: 'Cart' }}
             />
             <TopTab.Screen
                 name="Orders"
                 component={Orders}
-                options={{
-                    tabBarLabel: 'Orders',
-                }}
+                options={{ tabBarLabel: 'Orders' }}
             />
             <TopTab.Screen
                 name="Profile"
                 component={Profile}
-                options={{
-                    tabBarLabel: 'Profile',
-                }}
+                options={{ tabBarLabel: 'Profile' }}
             />
         </TopTab.Navigator>
     );
