@@ -1,28 +1,46 @@
-# MacOS
-.DS_Store
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# Enviroment
-.env
-.env.local
+# Testing
+coverage/
 
 # Expo
 .expo/
+*.jks
+*.p12
+*.keystore
+!debug.keystore
+
+# Build folders
 dist/
 web-build/
+build/
 
-# Node modules
-node_modules/
+# Environement variables (CRITICAL)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
 
-# Debug
+# Firebase Config (PROTECTED)
+# Prevents committing API Keys to public repo
+src/firebase/config.js
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.iml
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Native
-*.apk
-*.aab
-android/
-ios/
-
-# EAS
-.eas/

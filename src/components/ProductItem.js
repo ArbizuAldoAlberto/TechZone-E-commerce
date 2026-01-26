@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Product Item Component
+ * @description Renders a single product in a grid or list view.
+ * Features:
+ * - Displays product image, title, category, and price
+ * - Quick "Add to Cart" button
+ * - Favorite/Wishlist toggle
+ * - Adapts to Dark Mode
+ */
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { colors, getColors } from '../global/colors';
@@ -18,7 +27,7 @@ const ProductItem = ({ product, onPress, containerStyle, isDarkMode: propIsDarkM
 
     const isFavorite = favorites.some(fav => fav.id === product.id);
 
-    const handleToggleFavorite = (e) => {
+    const handleToggleFavorite = () => {
         dispatch(toggleFavorite(product));
     };
 
@@ -70,7 +79,7 @@ const styles = StyleSheet.create({
                 elevation: 3,
             },
             web: {
-                // boxShadow or standard styles
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
             }
         })
     },

@@ -1,5 +1,11 @@
+/**
+ * @fileoverview Yup Validation Schemas
+ * @description Form validation schemas for authentication flows.
+ * Uses Yup for declarative, composable validation rules.
+ */
 import * as yup from 'yup';
 
+/** Login form validation */
 export const loginSchema = yup.object().shape({
     email: yup
         .string()
@@ -11,6 +17,7 @@ export const loginSchema = yup.object().shape({
         .required('Password is required'),
 });
 
+/** Registration form validation with password strength requirements */
 export const registerSchema = yup.object().shape({
     name: yup
         .string()

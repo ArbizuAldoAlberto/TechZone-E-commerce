@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Skeleton Loader Component
+ * @description Displays animated placeholder content while data is loading.
+ * Contains specialized skeletons for:
+ * - Product Cards
+ * - Categories
+ * - Banners
+ * - Home Screen (Full layout)
+ * - Cart Screen (Full layout)
+ */
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Easing, Platform } from 'react-native';
 import { colors } from '../../global/colors';
@@ -131,6 +141,39 @@ export const HomeSkeleton = () => {
     );
 };
 
+/**
+ * Cart Skeleton
+ * Complete skeleton layout for cart screen
+ */
+export const CartSkeleton = () => {
+    return (
+        <View style={styles.cartContainer}>
+            {/* Header skeleton */}
+            <View style={styles.cartHeader}>
+                <SkeletonLoader width={150} height={32} borderRadius={8} />
+                <SkeletonLoader width={100} height={24} borderRadius={12} />
+            </View>
+
+            {/* Cart items skeleton */}
+            {[1, 2, 3].map((i) => (
+                <View key={i} style={styles.cartItemRow}>
+                    <SkeletonLoader width={80} height={80} borderRadius={12} />
+                    <View style={styles.cartItemInfo}>
+                        <SkeletonLoader width="70%" height={16} style={{ marginBottom: 8 }} />
+                        <SkeletonLoader width="40%" height={14} style={{ marginBottom: 8 }} />
+                        <SkeletonLoader width="30%" height={20} />
+                    </View>
+                </View>
+            ))}
+
+            {/* Footer skeleton */}
+            <View style={styles.cartFooter}>
+                <SkeletonLoader width="100%" height={50} borderRadius={16} />
+            </View>
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
     skeleton: {
         backgroundColor: '#E1E9EE',
@@ -167,6 +210,28 @@ const styles = StyleSheet.create({
         width: '48%',
         marginBottom: 16,
     },
+    cartContainer: {
+        flex: 1,
+        padding: 20,
+    },
+    cartHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 24,
+    },
+    cartItemRow: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        gap: 16,
+    },
+    cartItemInfo: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    cartFooter: {
+        marginTop: 'auto',
+        paddingTop: 20,
+    }
 });
 
 export default SkeletonLoader;

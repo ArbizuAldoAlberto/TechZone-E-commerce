@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Advanced Input Field Component
+ * @description A robust input component with support for:
+ * - Left and Right icons (clickable right icon)
+ * - Error state with icon and message
+ * - Password toggle (via rightIcon)
+ * - Multiline support
+ * - Custom keyboard types
+ */
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors } from '../../global/colors';
@@ -94,6 +103,7 @@ const styles = StyleSheet.create({
         height: 100,
         textAlignVertical: 'top',
         paddingTop: 12,
+        paddingBottom: 12,
     },
     rightIconButton: {
         padding: 4,

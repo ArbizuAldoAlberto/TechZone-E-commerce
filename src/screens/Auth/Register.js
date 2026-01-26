@@ -1,19 +1,22 @@
+/**
+ * @fileoverview Registration Screen
+ * @description User signup form with name, email, password validation.
+ * Creates user in Firebase Auth + Firestore and initiates session.
+ */
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { setUser } from '../../store/authSlice';
 import { insertSession } from '../../db';
 import { signUp } from '../../services/authService';
 import { colors } from '../../global/colors';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import InputField from '../../components/common/InputField';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
-
-// Validation schema imported
 import { registerSchema } from '../../utils/validationSchemas';
 
 const Register = ({ navigation }) => {
@@ -40,15 +43,9 @@ const Register = ({ navigation }) => {
     const onSubmit = async (data) => {
         setIsLoading(true);
         try {
-            // Call Firebase Auth SDK for signup (handles Firestore internally)
             const user = await signUp(data.email, data.password, data.name);
-
-            // Dispatch to Redux
             dispatch(setUser(user));
-
-            // Save session locally
             await insertSession(user);
-
             showAlert('Account Created!', 'Your account has been created successfully.', [{ text: 'OK' }], 'checkmark-circle-outline');
         } catch (error) {
             showAlert('Error', error.message, [{ text: 'OK' }], 'alert-circle-outline');
@@ -70,22 +67,17 @@ const Register = ({ navigation }) => {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {/* Header */}
                     <View style={styles.header}>
-                        <TouchableOpacity
-                            style={styles.backButton}
-                            onPress={() => navigation.goBack()}
-                        >
+                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                             <Ionicons name="arrow-back" size={24} color={colors.text} />
                         </TouchableOpacity>
-                        <View style={styles.headerTextContainer}>
+                        <View>
                             <Text style={styles.headerTitle}>Create Account</Text>
                             <Text style={styles.headerSubtitle}>Fill in your details to get started</Text>
                         </View>
                     </View>
 
                     <View style={styles.formContainer}>
-                        {/* Name Input */}
                         <Controller
                             control={control}
                             name="name"
@@ -103,7 +95,6 @@ const Register = ({ navigation }) => {
                             )}
                         />
 
-                        {/* Email Input */}
                         <Controller
                             control={control}
                             name="email"
@@ -122,7 +113,6 @@ const Register = ({ navigation }) => {
                             )}
                         />
 
-                        {/* Password Input */}
                         <Controller
                             control={control}
                             name="password"
@@ -142,7 +132,6 @@ const Register = ({ navigation }) => {
                             )}
                         />
 
-                        {/* Confirm Password */}
                         <Controller
                             control={control}
                             name="confirmPassword"
@@ -162,7 +151,6 @@ const Register = ({ navigation }) => {
                             )}
                         />
 
-                        {/* Terms Checkbox */}
                         <TouchableOpacity
                             style={styles.termsContainer}
                             onPress={() => setValue('acceptTerms', !acceptTerms)}
@@ -174,11 +162,8 @@ const Register = ({ navigation }) => {
                                 I accept the <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
                             </Text>
                         </TouchableOpacity>
-                        {errors.acceptTerms && (
-                            <Text style={styles.termsError}>{errors.acceptTerms.message}</Text>
-                        )}
+                        {errors.acceptTerms && <Text style={styles.termsError}>{errors.acceptTerms.message}</Text>}
 
-                        {/* Register Button */}
                         <TouchableOpacity
                             style={[styles.registerButton, (!isValid || isLoading) && styles.registerButtonDisabled]}
                             onPress={handleSubmit(onSubmit)}
@@ -190,7 +175,6 @@ const Register = ({ navigation }) => {
                             {!isLoading && <Ionicons name="arrow-forward" size={20} color={colors.white} />}
                         </TouchableOpacity>
 
-                        {/* Login Link */}
                         <View style={styles.footer}>
                             <Text style={styles.footerText}>Already have an account? </Text>
                             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -209,9 +193,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: colors.white,
     },
-    keyboardView: {
-        flex: 1,
-    },
+    keyboardView: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 24,
@@ -229,7 +211,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
-    headerTextContainer: {},
     headerTitle: {
         fontSize: 28,
         fontWeight: '800',
@@ -240,9 +221,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: colors.textLight,
     },
-    formContainer: {
-        flex: 1,
-    },
+    formContainer: { flex: 1 },
     termsContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -294,17 +273,11 @@ const styles = StyleSheet.create({
                 shadowOpacity: 0.3,
                 shadowRadius: 10,
             },
-            android: {
-                elevation: 8,
-            },
-            web: {
-                boxShadow: `0px 4px 10px ${colors.primary}4D`,
-            }
+            android: { elevation: 8 },
+            web: { boxShadow: `0px 4px 10px ${colors.primary}4D` }
         })
     },
-    registerButtonDisabled: {
-        opacity: 0.6,
-    },
+    registerButtonDisabled: { opacity: 0.6 },
     registerButtonText: {
         color: colors.white,
         fontSize: 18,

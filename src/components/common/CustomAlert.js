@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Custom Alert Component
+ * @description Cross-platform alert modal that works reliably on Web, iOS, and Android.
+ * Features:
+ * - Custom styling (Non-native look)
+ * - Dark mode support
+ * - Multiple buttons
+ * - Custom icons
+ */
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { colors, getColors } from '../../global/colors';

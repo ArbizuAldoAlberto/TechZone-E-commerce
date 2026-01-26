@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Product Detail Screen
+ * @description Displays full product information including images, price, description, and reviews.
+ * Features:
+ * - Image carousel with pagination
+ * - Add to cart functionality
+ * - Toggle favorite status
+ * - Review system with star rating and comments (Backend integrated)
+ * - Sharing functionality
+ */
 import React, { useState, useRef } from 'react';
 import {
     View,
@@ -6,23 +16,24 @@ import {
     Image,
     ScrollView,
     TouchableOpacity,
-    Dimensions,
     StatusBar,
     FlatList,
     TextInput,
     Share,
     Platform,
-    useWindowDimensions
+    useWindowDimensions,
+    ActivityIndicator
 } from 'react-native';
 import { colors, getColors } from '../../global/colors';
-import { fonts } from '../../global/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { addItem } from '../../store/cartSlice';
 import { toggleFavorite } from '../../store/favoritesSlice';
-import { addReview, selectReviewsByProductId } from '../../store/reviewsSlice';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
+
+// Backend Services
+import { useGetReviewsQuery, usePostReviewMutation } from '../../services/shopService';
 
 const ProductDetail = ({ route, navigation }) => {
     const { width } = useWindowDimensions();
@@ -37,8 +48,6 @@ const ProductDetail = ({ route, navigation }) => {
         reviews: 0,
     };
 
-    // ... (rest of logic unchanged until render)
-
     const productImages = product.images?.length > 0
         ? product.images
         : [product.image, product.image, product.image];
@@ -48,7 +57,12 @@ const ProductDetail = ({ route, navigation }) => {
     const isDarkMode = useSelector(state => state.theme.isDarkMode);
     const { user, localId } = useSelector(state => state.auth);
     const cartItems = useSelector(state => state.cart.items);
-    const productReviews = useSelector(state => selectReviewsByProductId(state, product.id));
+
+    // Backend Logic
+    const { data: productReviews = [], isLoading: isLoadingReviews, isError } = useGetReviewsQuery(product.id, {
+        refetchOnMountOrArgChange: true
+    });
+    const [triggerPostReview, { isLoading: isPostingReview }] = usePostReviewMutation();
 
     const isFavorite = favorites.some(fav => fav.id === product.id);
     const isLoggedIn = !!user || !!localId;
@@ -64,11 +78,12 @@ const ProductDetail = ({ route, navigation }) => {
 
     const flatListRef = useRef(null);
 
-    // Calculate average rating including user reviews
-    const allReviewsCount = (product.reviews || 0) + productReviews.length;
+    // Calculate average rating including dynamic backend reviews
+    // Note: product.rating is the static initial rating, we mix it or prefer dynamic
+    const allReviewsCount = productReviews.length;
     const avgRating = productReviews.length > 0
-        ? ((product.rating * (product.reviews || 0)) + productReviews.reduce((sum, r) => sum + r.rating, 0)) / allReviewsCount
-        : product.rating || 0;
+        ? productReviews.reduce((sum, r) => sum + r.rating, 0) / allReviewsCount
+        : product.rating || 0; // Fallback to seed data if no real reviews
 
     const handleToggleFavorite = () => {
         dispatch(toggleFavorite(product));
@@ -93,16 +108,12 @@ const ProductDetail = ({ route, navigation }) => {
                 message: `¡Mira este producto! ${product.title} - $${product.price}\n\nDisponible en TechZone`,
                 title: product.title,
             });
-        } catch (error) {
+        } catch {
             showAlert('Error', 'No se pudo compartir el producto', [{ text: 'OK' }], 'alert-circle-outline');
         }
     };
 
-    const handleGoToCart = () => {
-        navigation.navigate('MainTabs', { screen: 'Cart' });
-    };
-
-    const handleSubmitReview = () => {
+    const handleSubmitReview = async () => {
         if (!isLoggedIn) {
             showAlert(
                 'Iniciar Sesión Requerido',
@@ -126,16 +137,21 @@ const ProductDetail = ({ route, navigation }) => {
             return;
         }
 
-        dispatch(addReview({
-            productId: product.id,
-            rating: userRating,
-            comment: userComment,
-            userEmail: user || 'Usuario',
-        }));
+        try {
+            await triggerPostReview({
+                productId: product.id,
+                rating: userRating,
+                comment: userComment,
+                userEmail: user || 'Usuario',
+                userId: localId,
+            }).unwrap();
 
-        setUserRating(0);
-        setUserComment('');
-        showAlert('¡Gracias!', 'Tu reseña ha sido publicada', [{ text: 'OK' }], 'checkmark-circle-outline');
+            setUserRating(0);
+            setUserComment('');
+            showAlert('¡Gracias!', 'Tu reseña ha sido publicada', [{ text: 'OK' }], 'checkmark-circle-outline');
+        } catch (error) {
+            showAlert('Error', 'No se pudo publicar tu reseña. Intenta de nuevo.', [{ text: 'OK' }], 'alert-circle-outline');
+        }
     };
 
     const handleImageScroll = (event) => {
@@ -199,7 +215,7 @@ const ProductDetail = ({ route, navigation }) => {
             </View>
             <Text style={[styles.reviewComment, { color: themeColors.text }]}>{item.comment}</Text>
             <Text style={[styles.reviewDate, { color: themeColors.textLight }]}>
-                {new Date(item.createdAt).toLocaleDateString()}
+                {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Reciente'}
             </Text>
         </View>
     );
@@ -227,7 +243,7 @@ const ProductDetail = ({ route, navigation }) => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.iconButton, isDarkMode && styles.buttonDark]}
-                            onPress={handleGoToCart}
+                            onPress={() => navigation.navigate('MainTabs', { screen: 'Cart' })}
                         >
                             <Ionicons name="bag-outline" size={24} color={themeColors.text} />
                             {cartCount > 0 && (
@@ -345,23 +361,32 @@ const ProductDetail = ({ route, navigation }) => {
                                 numberOfLines={3}
                                 value={userComment}
                                 onChangeText={setUserComment}
-                                editable={isLoggedIn}
+                                editable={isLoggedIn && !isPostingReview}
                             />
 
                             <TouchableOpacity
-                                style={[styles.submitReviewButton, !isLoggedIn && styles.submitReviewButtonDisabled]}
+                                style={[styles.submitReviewButton, (!isLoggedIn || isPostingReview) && styles.submitReviewButtonDisabled]}
                                 onPress={handleSubmitReview}
                                 activeOpacity={0.8}
+                                disabled={!isLoggedIn || isPostingReview}
                             >
-                                <Ionicons name="send" size={18} color={colors.white} />
-                                <Text style={styles.submitReviewText}>
-                                    {isLoggedIn ? 'Publicar Reseña' : 'Iniciar Sesión'}
-                                </Text>
+                                {isPostingReview ? (
+                                    <ActivityIndicator size="small" color={colors.white} />
+                                ) : (
+                                    <>
+                                        <Ionicons name="send" size={18} color={colors.white} />
+                                        <Text style={styles.submitReviewText}>
+                                            {isLoggedIn ? 'Publicar Reseña' : 'Iniciar Sesión'}
+                                        </Text>
+                                    </>
+                                )}
                             </TouchableOpacity>
                         </View>
 
                         {/* Existing Reviews */}
-                        {productReviews.length > 0 && (
+                        {isLoadingReviews ? (
+                            <ActivityIndicator size="large" color={themeColors.primary} style={{ marginTop: 24 }} />
+                        ) : productReviews.length > 0 ? (
                             <View style={styles.reviewsList}>
                                 <Text style={[styles.reviewsListTitle, { color: themeColors.text }]}>
                                     Reseñas recientes ({productReviews.length})
@@ -372,9 +397,7 @@ const ProductDetail = ({ route, navigation }) => {
                                     </View>
                                 ))}
                             </View>
-                        )}
-
-                        {productReviews.length === 0 && (
+                        ) : (
                             <View style={styles.noReviews}>
                                 <Ionicons name="chatbubble-outline" size={40} color={themeColors.textLight} />
                                 <Text style={[styles.noReviewsText, { color: themeColors.textLight }]}>

@@ -1,3 +1,12 @@
+/**
+ * @fileoverview Shopping Cart Screen
+ * @description Manages cart items, checkout flow, and offline synchronization.
+ * Supports:
+ * - Adding/removing items
+ * - Offline persistent storage (DB + Redux)
+ * - Wishlist integration (Favorites)
+ * - Checkout with order confirmation
+ */
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, ScrollView } from 'react-native';
 import { colors, getColors } from '../../global/colors';
@@ -24,6 +33,7 @@ const Cart = ({ navigation }) => {
     const themeColors = getColors(isDarkMode);
     const dynamicStyles = getDynamicStyles(isDarkMode, themeColors);
 
+    // Order Totals
     const taxRate = 0.08;
     const tax = total * taxRate;
     const shipping = total > 50 ? 0 : 15;
@@ -41,8 +51,8 @@ const Cart = ({ navigation }) => {
             if (pendingItems.length > 0) {
                 dispatch(loadPendingItems(pendingItems));
             }
-        } catch (error) {
-            // Silent fail
+        } catch {
+            // Silent failure
         } finally {
             setIsLoadingPending(false);
         }
@@ -77,7 +87,7 @@ const Cart = ({ navigation }) => {
                 'checkmark-circle-outline'
             );
             dispatch(confirmCart());
-        } catch (error) {
+        } catch {
             showAlert(
                 'Error',
                 'No pudimos procesar tu orden. Intenta de nuevo.',
@@ -92,7 +102,6 @@ const Cart = ({ navigation }) => {
     // Render wishlist item
     const renderWishlistItem = ({ item }) => (
         <View style={[styles.wishlistItem, dynamicStyles.card]}>
-            {/* Delete from favorites button */}
             <TouchableOpacity
                 style={styles.wishlistDeleteButton}
                 onPress={() => {
@@ -113,7 +122,6 @@ const Cart = ({ navigation }) => {
                 <Text style={styles.wishlistPrice}>${item.price}</Text>
             </TouchableOpacity>
 
-            {/* Add to cart button */}
             <TouchableOpacity
                 style={styles.addFromWishlist}
                 onPress={() => {
@@ -417,7 +425,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: colors.primary,
     },
-    // Wishlist styles
     wishlistSection: {
         marginBottom: 20,
     },
@@ -544,10 +551,6 @@ const styles = StyleSheet.create({
     summaryValue: {
         fontSize: 14,
         fontWeight: '600',
-    },
-    divider: {
-        height: 1,
-        marginVertical: 12,
     },
     totalLabel: {
         fontSize: 18,

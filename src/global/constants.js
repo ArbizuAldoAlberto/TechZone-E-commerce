@@ -1,10 +1,11 @@
-// Firebase configuration
-// In production, use react-native-dotenv or expo-constants for secure config
+/**
+ * @fileoverview Application Constants
+ * @description Centralized configuration values for the TechZone app.
+ */
 
 /**
  * @constant BASE_URL
- * @description The base URL for the Firebase Realtime Database.
- * Used by Redux Toolkit Query services (shopApi, userApi).
+ * @description Firebase Realtime Database base URL for RTK Query services.
+ * Sourced from environment variables via Expo's dotenv support.
  */
 export const BASE_URL = process.env.EXPO_PUBLIC_FIREBASE_URL;
-

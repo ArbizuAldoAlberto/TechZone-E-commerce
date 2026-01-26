@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Generic Button Component
+ * @description A customizable button component supporting multiple styles and loading state.
+ * Types:
+ * - primary: Solid background (default)
+ * - secondary: Secondary background color
+ * - outline: Border only, transparent background
+ */
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors } from '../../global/colors';

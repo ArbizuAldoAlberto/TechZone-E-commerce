@@ -3,39 +3,40 @@ import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 /**
- * Sign up a new user and create their profile in Firestore
- * @param {string} email 
- * @param {string} password 
- * @param {string} name 
- * @returns {Promise<{email: string, idToken: string, localId: string, role: string}>}
+ * @fileoverview Authentication Service (Firebase Implementation)
+ * @description Centralizes all Auth interactions (Sign Up, Sign In, Reset).
+ * Handles Firestore Profile creation/merging and error translation.
+ */
+
+/**
+ * Creates a new user in Firebase Auth and a corresponding profile in Firestore.
+ * 
+ * @param {string} email - User's email address.
+ * @param {string} password - User's password (min 6 chars).
+ * @param {string} name - User's full display name.
+ * @returns {Promise<{email: string, idToken: string, localId: string, displayName: string, role: string}>} Authenticated user session data.
+ * @throws {Error} If email exists, password is weak, or network fails.
  */
 export const signUp = async (email, password, name) => {
     try {
-        // 1. Create Authentication User
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        // 1. Auth Creation
+        const { user } = await createUserWithEmailAndPassword(auth, email, password);
 
-        // 2. Create User Profile in Firestore
+        // 2. Profile Creation (Firestore)
         const userProfile = {
-            name: name,
-            email: email,
-            role: 'user', // Default role
+            name,
+            email,
+            role: 'user',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
-            photoURL: null,
-            phoneNumber: null,
             isActive: true,
-            favorites: [], // Initialize empty favorites
-            settings: {    // Initialize default settings
-                notifications: true,
-                newsletter: true,
-                theme: 'system'
-            }
+            favorites: [],
+            settings: { notifications: true, newsletter: true, theme: 'system' }
         };
 
         await setDoc(doc(db, 'users', user.uid), userProfile);
 
-        // 3. Return user data formatted for the app
+        // 3. Return Session
         return {
             email: user.email,
             idToken: await user.getIdToken(),
@@ -44,75 +45,73 @@ export const signUp = async (email, password, name) => {
             role: 'user'
         };
     } catch (error) {
-        throw new Error(getAuthErrorMessage(error.code));
+        throw new Error(mapAuthError(error.code));
     }
 };
 
 /**
- * Sign in an existing user and fetch their profile
+ * Authenticates an existing user and retrieves their extended profile.
+ * 
  * @param {string} email 
  * @param {string} password 
- * @returns {Promise<{email: string, idToken: string, localId: string}>}
+ * @returns {Promise<{email: string, idToken: string, localId: string, displayName: string, role: string, photoURL: ?string}>}
+ * @throws {Error} If credentials are invalid or account is disabled.
  */
 export const signIn = async (email, password) => {
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        const { user } = await signInWithEmailAndPassword(auth, email, password);
         const token = await user.getIdToken();
 
-        // Fetch user profile from Firestore to get name/role
+        // Fetch Profile for Role/Name
         const userDoc = await getDoc(doc(db, 'users', user.uid));
-
-        // Merge auth data with profile data if it exists
-        const profileData = userDoc.exists() ? userDoc.data() : {};
+        const profile = userDoc.exists() ? userDoc.data() : {};
 
         return {
             email: user.email,
             idToken: token,
             localId: user.uid,
-            displayName: profileData.name || user.displayName || 'User',
-            role: profileData.role || 'user',
-            photoURL: profileData.photoURL || null
+            displayName: profile.name || user.displayName || 'User',
+            role: profile.role || 'user',
+            photoURL: profile.photoURL || null
         };
     } catch (error) {
-        throw new Error(getAuthErrorMessage(error.code));
+        throw new Error(mapAuthError(error.code));
     }
 };
 
 /**
- * Send password reset email
+ * Sends a password reset email to the provided address.
+ * 
  * @param {string} email 
  * @returns {Promise<{email: string}>}
+ * @throws {Error} If email is invalid or user not found.
  */
 export const sendPasswordResetEmail = async (email) => {
     try {
         await firebaseSendPasswordResetEmail(auth, email);
         return { email };
     } catch (error) {
-        throw new Error(getAuthErrorMessage(error.code));
+        throw new Error(mapAuthError(error.code));
     }
 };
 
 /**
- * Translate Firebase Auth error codes to user-friendly messages
- * @param {string} errorCode 
- * @returns {string}
+ * Maps extensive Firebase Error Codes to user-friendly messages.
+ * @private
+ * @param {string} code - Firebase error code (e.g. 'auth/user-not-found')
+ * @returns {string} Human readable message.
  */
-const getAuthErrorMessage = (errorCode) => {
-    const errorMessages = {
-        'auth/email-already-in-use': 'This email is already registered.',
-        'auth/operation-not-allowed': 'Password sign-in is disabled.',
-        'auth/too-many-requests': 'Too many attempts. Please try again later.',
-        'auth/user-not-found': 'No account exists with this email.',
+const mapAuthError = (code) => {
+    const messages = {
+        'auth/email-already-in-use': 'Email already registered.',
+        'auth/user-not-found': 'Account not found.',
         'auth/wrong-password': 'Incorrect password.',
-        'auth/user-disabled': 'This account has been disabled.',
-        'auth/invalid-email': 'Invalid email address.',
-        'auth/weak-password': 'Password must be at least 6 characters.',
-        'auth/invalid-credential': 'Incorrect email or password.',
-        'auth/network-request-failed': 'Network error. Please check your connection.',
-        'auth/configuration-not-found': 'Firebase Auth is not enabled. Please enable "Email/Password" provider in the Firebase Console.',
+        'auth/invalid-email': 'Invalid email format.',
+        'auth/user-disabled': 'Account disabled.',
+        'auth/too-many-requests': 'Too many attempts. Try again later.',
+        'auth/network-request-failed': 'No internet connection.',
+        'auth/weak-password': 'Password too weak (min 6 chars).',
+        'auth/invalid-credential': 'Invalid credentials.'
     };
-
-    return errorMessages[errorCode] || `An error occurred (${errorCode}). Please try again.`;
+    return messages[code] || `Authentication error (${code}).`;
 };
-
