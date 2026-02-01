@@ -1,110 +1,129 @@
 /**
- * @fileoverview Shopping Cart State with Offline-First Support
- * @description Manages cart items, totals, and offline sync queue.
- * Items added while offline are marked with `isPending` and sync when connection restores.
+ * @fileoverview Cart State Management (Offline-First)
+ * @module store/cartSlice
+ * @description Manages the shopping cart lifecycle, including CRUD operations,
+ * price calculation, and offline synchronization strategy using a persistent queue.
  */
+
 import { createSlice } from '@reduxjs/toolkit';
 
+/**
+ * @typedef {Object} CartItem
+ * @property {string} id - Product Unique Identifier
+ * @property {string} title - Product Name
+ * @property {number} price - Unit Price
+ * @property {number} quantity - Purchase Quantity
+ * @property {boolean} [isPending] - Sync status flag (true = waiting for network)
+ */
+
 const initialState = {
+    /** @type {CartItem[]} */
     items: [],
+    /** @type {number} */
     total: 0,
+    /** @type {boolean} */
     isOffline: false,
+    /** @type {number} */
     pendingSyncCount: 0,
+    /** @type {object|null} Snapshot for rollback on sync failure */
+    snapshot: null,
 };
 
+/**
+ * @const cartSlice
+ * @description Redux slice for cart domain.
+ * Uses Immer for immutable state updates via mutable syntax.
+ */
 export const cartSlice = createSlice({
     name: 'cart',
     initialState,
     reducers: {
         /**
-         * @description Adds product to cart or increments quantity if exists.
-         * Marks item as pending if offline for later sync.
+         * @function addItem
+         * @description Adds or increments a product in the cart.
+         * Automatically flags item as 'pending' if device is offline.
+         * @param {Object} state - Draft state
+         * @param {Object} action - { payload: Product }
          */
         addItem: (state, action) => {
-            const productToAdd = action.payload;
-            const inCart = state.items.find((item) => item.id === productToAdd.id);
+            const product = action.payload;
+            const existing = state.items.find((item) => item.id === product.id);
 
-            if (inCart) {
-                inCart.quantity += 1;
-                if (state.isOffline && !inCart.isPending) {
-                    inCart.isPending = true;
+            if (existing) {
+                existing.quantity += 1;
+                // If offline and not yet pending, mark it
+                if (state.isOffline && !existing.isPending) {
+                    existing.isPending = true;
                     state.pendingSyncCount += 1;
                 }
             } else {
                 state.items.push({
-                    ...productToAdd,
+                    ...product,
                     quantity: 1,
                     isPending: state.isOffline,
                 });
-                if (state.isOffline) {
-                    state.pendingSyncCount += 1;
-                }
+                if (state.isOffline) state.pendingSyncCount += 1;
             }
-            state.total += productToAdd.price;
+
+            state.total += product.price;
         },
 
         /**
-         * @description Decreases item quantity or removes if quantity reaches 0.
+         * @function decreaseItem
+         * @description Decrements quantity. Removes item if count reaches 0.
+         * Handles pending count adjustment.
          */
         decreaseItem: (state, action) => {
             const itemId = action.payload;
-            const inCart = state.items.find((item) => item.id === itemId);
+            const existing = state.items.find((item) => item.id === itemId);
 
-            if (!inCart) return;
+            if (!existing) return;
 
-            if (inCart.quantity > 1) {
-                inCart.quantity -= 1;
-                state.total -= inCart.price;
-                if (state.isOffline && !inCart.isPending) {
-                    inCart.isPending = true;
+            if (existing.quantity > 1) {
+                existing.quantity -= 1;
+                state.total -= existing.price;
+
+                if (state.isOffline && !existing.isPending) {
+                    existing.isPending = true;
                     state.pendingSyncCount += 1;
                 }
             } else {
-                if (inCart.isPending) {
-                    state.pendingSyncCount = Math.max(0, state.pendingSyncCount - 1);
-                }
-                state.items = state.items.filter((item) => item.id !== itemId);
-                state.total -= inCart.price;
+                // Delegate to internal remove logic
+                removeItemInternal(state, existing);
             }
         },
 
         /**
-         * @description Removes item completely from cart regardless of quantity.
+         * @function removeItem
+         * @description Completely removes an item from the cart.
          */
         removeItem: (state, action) => {
-            const itemId = action.payload;
-            const inCart = state.items.find((item) => item.id === itemId);
-
-            if (!inCart) return;
-
-            if (inCart.isPending) {
-                state.pendingSyncCount = Math.max(0, state.pendingSyncCount - 1);
-            }
-            state.total -= inCart.price * inCart.quantity;
-            state.items = state.items.filter((item) => item.id !== itemId);
+            const existing = state.items.find((item) => item.id === action.payload);
+            if (existing) removeItemInternal(state, existing);
         },
 
-        /** Clears entire cart after successful order confirmation */
+        /**
+         * @function confirmCart
+         * @description Resets cart after successful checkout.
+         */
         confirmCart: (state) => {
             state.items = [];
             state.total = 0;
             state.pendingSyncCount = 0;
         },
 
-        /** Updates network connectivity status from NetInfo listener */
         setOfflineStatus: (state, action) => {
             state.isOffline = action.payload;
         },
 
-        /** Marks all pending items as synced after successful backend sync */
         markItemsSynced: (state) => {
-            state.items = state.items.map((item) => ({ ...item, isPending: false }));
+            state.items.forEach(item => { item.isPending = false; });
             state.pendingSyncCount = 0;
         },
 
         /**
-         * @description Loads pending items from SQLite on app restart.
-         * Merges with existing cart, avoiding duplicates.
+         * @function loadPendingItems
+         * @description Merges persisted offline items into the active cart on boot.
          */
         loadPendingItems: (state, action) => {
             const pendingItems = action.payload;
@@ -121,12 +140,55 @@ export const cartSlice = createSlice({
             state.pendingSyncCount = pendingItems.length;
         },
 
-        /** Manually updates pending sync count for edge cases */
-        setPendingSyncCount: (state, action) => {
-            state.pendingSyncCount = action.payload;
+        /**
+         * @function saveSnapshot
+         * @description Saves current cart state before optimistic mutation.
+         * Call this BEFORE making an offline mutation.
+         */
+        saveSnapshot: (state) => {
+            state.snapshot = {
+                items: JSON.parse(JSON.stringify(state.items)),
+                total: state.total,
+                pendingSyncCount: state.pendingSyncCount
+            };
+        },
+
+        /**
+         * @function rollbackCart
+         * @description Restores cart to last snapshot on sync failure.
+         * Used for Optimistic UI recovery.
+         */
+        rollbackCart: (state) => {
+            if (state.snapshot) {
+                state.items = state.snapshot.items;
+                state.total = state.snapshot.total;
+                state.pendingSyncCount = state.snapshot.pendingSyncCount;
+                state.snapshot = null;
+            }
+        },
+
+        /**
+         * @function clearSnapshot
+         * @description Clears snapshot after successful sync.
+         */
+        clearSnapshot: (state) => {
+            state.snapshot = null;
         },
     },
 });
+
+/**
+ * @helper removeItemInternal
+ * @description Encapsulates removal logic to DRY up reducers.
+ * @private
+ */
+const removeItemInternal = (state, item) => {
+    state.total -= item.price * item.quantity;
+    if (item.isPending) {
+        state.pendingSyncCount = Math.max(0, state.pendingSyncCount - 1);
+    }
+    state.items = state.items.filter((i) => i.id !== item.id);
+};
 
 export const {
     addItem,
@@ -136,7 +198,9 @@ export const {
     setOfflineStatus,
     markItemsSynced,
     loadPendingItems,
-    setPendingSyncCount,
+    saveSnapshot,
+    rollbackCart,
+    clearSnapshot
 } = cartSlice.actions;
 
 export default cartSlice.reducer;

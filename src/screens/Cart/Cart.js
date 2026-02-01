@@ -1,75 +1,112 @@
 /**
- * @fileoverview Shopping Cart Screen
- * @description Manages cart items, checkout flow, and offline synchronization.
- * Supports:
- * - Adding/removing items
- * - Offline persistent storage (DB + Redux)
- * - Wishlist integration (Favorites)
- * - Checkout with order confirmation
+ * @fileoverview Shopping Cart Screen.
+ * @description Manages cart items, offline synchronization, and checkout process.
+ * Includes "Wishlist" integration and "The Purge" optimizations.
+ * 
+ * @module screens/Cart
  */
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, ScrollView } from 'react-native';
-import { colors, getColors } from '../../global/colors';
-import { useSelector, useDispatch } from 'react-redux';
+
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    FlatList,
+    TouchableOpacity,
+    ActivityIndicator,
+    Image,
+    ScrollView,
+    Platform
+} from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInRight, Layout } from 'react-native-reanimated';
+
+// Logic & Storage
 import { addItem, decreaseItem, removeItem, confirmCart, loadPendingItems } from '../../store/cartSlice';
 import { toggleFavorite } from '../../store/favoritesSlice';
-import CartItem from '../../components/CartItem';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { usePostOrderMutation } from '../../services/shopService';
 import { fetchPendingCartItems, clearPendingCartItems } from '../../db';
+import { colors, getColors } from '../../global/colors';
+import { theme } from '../../global/theme';
+import { fonts } from '../../global/fonts';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
 
+// Components
+import CartItem from '../../components/CartItem';
+import ParticlesBackground from '../../components/3d/ParticlesBackground';
+import Button from '../../components/common/Button';
+
+/**
+ * @component Cart
+ * @description Main Cart Screen.
+ * @param {object} props.navigation - Navigation prop.
+ */
 const Cart = ({ navigation }) => {
-    const { items, total, isOffline, pendingSyncCount } = useSelector(state => state.cart);
-    const { localId, user } = useSelector(state => state.auth);
-    const isDarkMode = useSelector(state => state.theme.isDarkMode);
-    const favorites = useSelector(state => state.favorites?.items || []);
     const dispatch = useDispatch();
-    const [triggerPostOrder, { isLoading }] = usePostOrderMutation();
-    const [isLoadingPending, setIsLoadingPending] = useState(true);
     const { alertConfig, showAlert, hideAlert } = useCustomAlert();
 
+    // Selectors
+    const { items, total, isOffline } = useSelector(state => state.cart);
+    const { localId, user } = useSelector(state => state.auth);
+    const favorites = useSelector(state => state.favorites?.items || []);
+    const isDarkMode = useSelector(state => state.theme.isDarkMode);
+
+    // Local State
+    const [isLoadingPending, setIsLoadingPending] = useState(true);
+    const [triggerPostOrder, { isLoading: isPostingOrder }] = usePostOrderMutation();
+
+    // Derived
     const themeColors = getColors(isDarkMode);
-    const dynamicStyles = getDynamicStyles(isDarkMode, themeColors);
+    const pendingCount = items.filter(i => i.isPending).length;
 
-    // Order Totals
-    const taxRate = 0.08;
-    const tax = total * taxRate;
-    const shipping = total > 50 ? 0 : 15;
-    const finalTotal = total + tax + shipping;
-
-    // Load pending items from SQLite on mount
+    /**
+     * @effect SyncPendingItems
+     * @description Loads local SQLite cart items on mount to sync offline data.
+     */
     useEffect(() => {
-        loadPendingItemsFromDb();
-    }, []);
-
-    const loadPendingItemsFromDb = async () => {
-        try {
-            setIsLoadingPending(true);
-            const pendingItems = await fetchPendingCartItems();
-            if (pendingItems.length > 0) {
-                dispatch(loadPendingItems(pendingItems));
+        let mounted = true;
+        (async () => {
+            try {
+                const pending = await fetchPendingCartItems();
+                if (mounted && pending?.length) {
+                    dispatch(loadPendingItems(pending));
+                }
+            } catch (e) {
+                console.warn('DB Sync Error', e);
+            } finally {
+                if (mounted) setIsLoadingPending(false);
             }
-        } catch {
-            // Silent failure
-        } finally {
-            setIsLoadingPending(false);
-        }
-    };
+        })();
+        return () => { mounted = false; };
+    }, [dispatch]);
 
-    const handleConfirm = async () => {
+    /**
+     * @memo transactionDetails
+     * @description Calculates tax, shipping, and final total.
+     */
+    const { finalTotal, tax, shipping } = useMemo(() => {
+        const taxVal = total * 0.08;
+        const shippingVal = total > 50 ? 0 : 15;
+        return {
+            tax: taxVal,
+            shipping: shippingVal,
+            finalTotal: total + taxVal + shippingVal
+        };
+    }, [total]);
+
+    /**
+     * @function handleCheckout
+     * @description Processes order submission or local save if offline.
+     */
+    const handleCheckout = async () => {
         if (isOffline) {
-            showAlert(
-                'Sin Conexión',
-                'No puedes confirmar la compra sin conexión a internet. Los items se guardarán localmente.',
-                [{ text: 'Entendido' }],
-                'cloud-offline-outline'
-            );
+            showAlert('Offline Mode', 'Saved locally. Sync later.', [{ text: 'OK' }]);
             return;
         }
 
-        const orderData = {
+        const payload = {
             items,
             total: finalTotal,
             user: localId || 'anonymous',
@@ -78,519 +115,301 @@ const Cart = ({ navigation }) => {
         };
 
         try {
-            await triggerPostOrder(orderData).unwrap();
+            await triggerPostOrder(payload).unwrap();
             await clearPendingCartItems();
-            showAlert(
-                '¡Éxito!',
-                'Tu orden ha sido procesada correctamente.',
-                [{ text: 'Ver Pedidos', onPress: () => navigation.navigate('Orders') }],
-                'checkmark-circle-outline'
-            );
             dispatch(confirmCart());
-        } catch {
-            showAlert(
-                'Error',
-                'No pudimos procesar tu orden. Intenta de nuevo.',
-                [{ text: 'OK' }],
-                'alert-circle-outline'
-            );
+            showAlert('Confirmed', 'Order placed successfully.', [
+                { text: 'Orders', onPress: () => navigation.navigate('Orders') }
+            ]);
+        } catch (error) {
+            showAlert('Error', 'Transaction failed.', [{ text: 'OK' }]);
         }
     };
 
-    const pendingCount = items.filter(item => item.isPending).length;
-
-    // Render wishlist item
-    const renderWishlistItem = ({ item }) => (
-        <View style={[styles.wishlistItem, dynamicStyles.card]}>
-            <TouchableOpacity
-                style={styles.wishlistDeleteButton}
-                onPress={() => {
-                    dispatch(toggleFavorite(item));
-                    showAlert('Eliminado', `${item.title} se eliminó de favoritos`, [{ text: 'OK' }], 'heart-dislike-outline');
-                }}
-            >
-                <Ionicons name="close" size={14} color={colors.white} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-                style={styles.wishlistContent}
-                onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                activeOpacity={0.8}
-            >
-                <Image source={{ uri: item.image }} style={styles.wishlistImage} resizeMode="contain" />
-                <Text style={[styles.wishlistTitle, dynamicStyles.text]} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.wishlistPrice}>${item.price}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-                style={styles.addFromWishlist}
-                onPress={() => {
-                    dispatch(addItem({ ...item, quantity: 1 }));
-                    showAlert('Agregado', `${item.title} se agregó al carrito`, [{ text: 'OK' }], 'cart-outline');
-                }}
-            >
-                <Ionicons name="add" size={18} color={colors.white} />
-            </TouchableOpacity>
-        </View>
-    );
-
-    if (isLoadingPending) {
-        return (
-            <SafeAreaView style={[styles.emptyContainer, dynamicStyles.container]} edges={['top']}>
-                <ActivityIndicator size="large" color={themeColors.primary} />
-                <Text style={[styles.loadingText, dynamicStyles.textLight]}>Loading cart...</Text>
-                <CustomAlert {...alertConfig} onClose={hideAlert} />
-            </SafeAreaView>
-        );
-    }
+    if (isLoadingPending) return <LoadingView themeColors={themeColors} />;
 
     if (items.length === 0 && favorites.length === 0) {
-        return (
-            <SafeAreaView style={[styles.emptyContainer, dynamicStyles.container]} edges={['top']}>
-                <View style={styles.emptyIconContainer}>
-                    <Ionicons name="cart-outline" size={80} color={themeColors.textLight} />
-                </View>
-                <Text style={[styles.emptyTitle, dynamicStyles.text]}>Your cart is empty</Text>
-                <Text style={[styles.emptySubtitle, dynamicStyles.textLight]}>
-                    Add some products to get started
-                </Text>
-                <TouchableOpacity
-                    style={styles.shopNowButton}
-                    onPress={() => navigation.navigate('Shop')}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="bag-handle-outline" size={20} color={colors.white} />
-                    <Text style={styles.shopNowText}>Start Shopping</Text>
-                </TouchableOpacity>
-                <CustomAlert {...alertConfig} onClose={hideAlert} />
-            </SafeAreaView>
-        );
+        return <EmptyCartView navigation={navigation} themeColors={themeColors} isDarkMode={isDarkMode} />;
     }
 
     return (
-        <SafeAreaView style={[styles.safeArea, dynamicStyles.container]} edges={['top']}>
+        <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
+            <ParticlesBackground />
             <CustomAlert {...alertConfig} onClose={hideAlert} />
 
-            {/* Offline Banner */}
             {isOffline && (
                 <View style={styles.offlineBanner}>
-                    <Ionicons name="cloud-offline-outline" size={18} color={colors.white} />
-                    <Text style={styles.offlineBannerText}>
-                        Mode Offline - Los cambios se sincronizarán
-                    </Text>
+                    <Ionicons name="cloud-offline-outline" size={14} color="#FFF" />
+                    <Text style={styles.offlineText}>Offline Mode • Local Save</Text>
                 </View>
             )}
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View>
-                        <Text style={[styles.headerTitle, dynamicStyles.text]}>My Cart</Text>
-                        <Text style={[styles.itemCount, dynamicStyles.textLight]}>
-                            {items.length} {items.length === 1 ? 'Item' : 'Items'}
-                            {pendingCount > 0 && (
-                                <Text style={styles.pendingText}> • {pendingCount} pending sync</Text>
-                            )}
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.clearButton, dynamicStyles.card]}
-                        onPress={() => navigation.navigate('Shop')}
-                    >
-                        <Text style={styles.editText}>Continue Shopping</Text>
-                    </TouchableOpacity>
+            <View style={styles.header}>
+                <View>
+                    <Text style={[styles.title, { color: themeColors.text }]}>Cart ({items.length})</Text>
+                    {pendingCount > 0 && (
+                        <Text style={{ color: colors.accent, fontSize: 12 }}>{pendingCount} offline items</Text>
+                    )}
                 </View>
+                <TouchableOpacity onPress={() => navigation.navigate('Shop')}>
+                    <Text style={styles.linkText}>Keep Shopping</Text>
+                </TouchableOpacity>
+            </View>
 
-                {/* Wishlist Section */}
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 {favorites.length > 0 && (
-                    <View style={styles.wishlistSection}>
-                        <View style={styles.wishlistHeader}>
-                            <Ionicons name="heart" size={20} color={colors.error} />
-                            <Text style={[styles.wishlistHeaderText, dynamicStyles.text]}>
-                                Wishlist ({favorites.length})
-                            </Text>
-                        </View>
-                        <FlatList
-                            data={favorites}
-                            renderItem={renderWishlistItem}
-                            keyExtractor={item => `wishlist-${item.id}`}
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.wishlistList}
+                    <WishlistSection
+                        favorites={favorites}
+                        dispatch={dispatch}
+                        navigation={navigation}
+                        themeColors={themeColors}
+                        isDarkMode={isDarkMode}
+                    />
+                )}
+
+                {items.length > 0 && items.map((item, index) => (
+                    <Animated.View
+                        key={item.pendingId || item.id}
+                        entering={FadeInRight.delay(index * 50)}
+                        layout={Layout.springify()}
+                    >
+                        <CartItem
+                            item={item}
+                            onPress={() => navigation.navigate('ProductDetail', { product: item })}
+                            onIncrement={() => dispatch(addItem(item))}
+                            onDecrement={() => dispatch(decreaseItem(item.id))}
+                            onRemove={() => dispatch(removeItem(item.id))}
+                            isDarkMode={isDarkMode}
                         />
-                    </View>
-                )}
-
-                {/* Pending Items Alert */}
-                {pendingCount > 0 && !isOffline && (
-                    <View style={styles.syncAlert}>
-                        <Ionicons name="sync-outline" size={18} color={colors.accent} />
-                        <Text style={styles.syncAlertText}>
-                            {pendingCount} item(s) will sync when connected
-                        </Text>
-                    </View>
-                )}
-
-                {/* Cart Items */}
-                {items.length > 0 && (
-                    <View style={styles.cartItemsContainer}>
-                        <Text style={[styles.sectionTitle, dynamicStyles.text]}>Cart Items</Text>
-                        {items.map((item) => (
-                            <View key={item.pendingId || item.id.toString()} style={styles.cartItemWrapper}>
-                                <CartItem
-                                    item={item}
-                                    onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                                    onIncrement={() => dispatch(addItem(item))}
-                                    onDecrement={() => dispatch(decreaseItem(item.id))}
-                                    onRemove={() => dispatch(removeItem(item.id))}
-                                    isDarkMode={isDarkMode}
-                                />
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-                <View style={{ height: 280 }} />
+                    </Animated.View>
+                ))}
             </ScrollView>
 
-            {/* Footer Summary */}
             {items.length > 0 && (
-                <View style={[styles.footer, dynamicStyles.card]}>
-                    <View style={styles.summarySection}>
-                        <View style={styles.summaryRow}>
-                            <Text style={[styles.summaryLabel, dynamicStyles.textLight]}>Subtotal</Text>
-                            <Text style={[styles.summaryValue, dynamicStyles.text]}>${total.toFixed(2)}</Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                            <Text style={[styles.summaryLabel, dynamicStyles.textLight]}>Tax (8%)</Text>
-                            <Text style={[styles.summaryValue, dynamicStyles.text]}>${tax.toFixed(2)}</Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                            <Text style={[styles.summaryLabel, dynamicStyles.textLight]}>Shipping</Text>
-                            <Text style={[styles.summaryValue, { color: shipping === 0 ? colors.success : themeColors.text }]}>
-                                {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
-                            </Text>
-                        </View>
-                    </View>
-
-                    <View style={[styles.divider, dynamicStyles.divider]} />
-
-                    <View style={[styles.summaryRow, styles.totalRow]}>
-                        <Text style={[styles.totalLabel, dynamicStyles.text]}>Total</Text>
-                        <Text style={[styles.totalValue, dynamicStyles.text]}>${finalTotal.toFixed(2)}</Text>
-                    </View>
-
-                    <TouchableOpacity
-                        style={[
-                            styles.checkoutButton,
-                            isLoading && styles.checkoutButtonLoading,
-                            isOffline && styles.checkoutButtonOffline
-                        ]}
-                        onPress={handleConfirm}
-                        disabled={isLoading}
-                        activeOpacity={0.8}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color={colors.white} />
-                        ) : (
-                            <>
-                                <Ionicons
-                                    name={isOffline ? "cloud-offline-outline" : "bag-check-outline"}
-                                    size={22}
-                                    color={colors.white}
-                                />
-                                <Text style={styles.checkoutText}>
-                                    {isOffline ? 'Offline - Save Locally' : 'Confirm Purchase'}
-                                </Text>
-                            </>
-                        )}
-                    </TouchableOpacity>
-
-                    <View style={styles.secureRow}>
-                        <Ionicons name="shield-checkmark-outline" size={16} color={themeColors.textLight} />
-                        <Text style={[styles.secureText, dynamicStyles.textLight]}>Secure Payment • SSL Encrypted</Text>
-                    </View>
-                </View>
+                <CheckoutFooter
+                    total={total}
+                    shipping={shipping}
+                    finalTotal={finalTotal}
+                    onCheckout={handleCheckout}
+                    isOffline={isOffline}
+                    isProcessing={isPostingOrder}
+                    themeColors={themeColors}
+                    isDarkMode={isDarkMode}
+                />
             )}
         </SafeAreaView>
     );
 };
 
-const getDynamicStyles = (isDarkMode, themeColors) => StyleSheet.create({
-    container: {
-        backgroundColor: isDarkMode ? '#000000' : colors.background,
-    },
-    text: {
-        color: themeColors.text,
-    },
-    textLight: {
-        color: themeColors.textLight,
-    },
-    card: {
-        backgroundColor: isDarkMode ? '#1C1C1E' : colors.white,
-    },
-    divider: {
-        backgroundColor: isDarkMode ? '#38383A' : colors.border,
-    },
-});
+// --- Sub-Components (Internal) ---
+
+/**
+ * @component LoadingView
+ * @description Full screen loader.
+ */
+const LoadingView = ({ themeColors }) => (
+    <View style={[styles.center, { backgroundColor: themeColors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+);
+
+/**
+ * @component EmptyCartView
+ * @description Displayed when cart and wishlist are empty.
+ */
+const EmptyCartView = ({ navigation, themeColors, isDarkMode }) => (
+    <SafeAreaView style={[styles.center, { backgroundColor: themeColors.background }]} edges={['top']}>
+        <ParticlesBackground />
+        <View style={styles.emptyCircle}>
+            <Ionicons name="cart-outline" size={48} color={isDarkMode ? '#555' : '#CCC'} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: themeColors.text }]}>Your Cart is Empty</Text>
+        <Text style={[styles.emptySub, { color: themeColors.textLight }]}>Looks like you haven't added anything yet.</Text>
+        <Button
+            title="Start Shopping"
+            onPress={() => navigation.navigate('Shop')}
+            type="primary"
+            style={{ marginTop: 32, width: 200 }}
+        />
+    </SafeAreaView>
+);
+
+/**
+ * @component WishlistSection
+ * @description Horizontal list of saved items.
+ */
+const WishlistSection = ({ favorites, dispatch, navigation, themeColors, isDarkMode }) => (
+    <View style={styles.wishSection}>
+        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Saved for Later ({favorites.length})</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            {favorites.map((fav) => (
+                <View key={fav.id} style={[styles.favCard, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F5F5F5' }]}>
+                    <TouchableOpacity
+                        style={styles.removeFav}
+                        onPress={() => dispatch(toggleFavorite(fav))}
+                    >
+                        <Ionicons name="close" size={12} color="#FFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.favContent}
+                        onPress={() => navigation.navigate('ProductDetail', { product: fav })}
+                    >
+                        <Image source={{ uri: fav.thumbnail || fav.images?.[0] }} style={styles.favImg} resizeMode="contain" />
+                        <Text numberOfLines={1} style={[styles.favTitle, { color: themeColors.text }]}>{fav.title}</Text>
+                        <Text style={styles.favPrice}>${fav.price}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.favAdd}
+                        onPress={() => dispatch(addItem(fav))}
+                    >
+                        <Ionicons name="add" size={16} color="#FFF" />
+                    </TouchableOpacity>
+                </View>
+            ))}
+        </ScrollView>
+    </View>
+);
+
+/**
+ * @component CheckoutFooter
+ * @description Fixed bottom footer with totals and checkout button.
+ */
+const CheckoutFooter = ({ total, shipping, finalTotal, onCheckout, isOffline, isProcessing, themeColors, isDarkMode }) => {
+    const { bottom } = useSafeAreaInsets();
+
+    // Style override to handle web/native shadow differences if needed
+    // Using standard Native shadow props which work on both (with strict React Native or Expo)
+
+    return (
+        <View style={[
+            styles.footer,
+            {
+                backgroundColor: isDarkMode ? '#1C1917' : '#FFF',
+                borderTopColor: themeColors.border,
+                paddingBottom: Math.max(20, bottom + 10)
+            }
+        ]}>
+            <View style={styles.row}>
+                <Text style={{ color: themeColors.textLight, fontFamily: fonts.medium }}>Subtotal</Text>
+                <Text style={{ color: themeColors.text, fontFamily: fonts.bold }}>${total.toFixed(2)}</Text>
+            </View>
+            <View style={styles.row}>
+                <Text style={{ color: themeColors.textLight, fontFamily: fonts.medium }}>Shipping</Text>
+                <Text style={{ color: shipping === 0 ? colors.success : themeColors.text, fontFamily: fonts.bold }}>
+                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+                </Text>
+            </View>
+            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
+            <View style={[styles.row, { marginBottom: 20 }]}>
+                <Text style={{ color: themeColors.text, fontFamily: fonts.black, fontSize: 18 }}>Total</Text>
+                <Text style={{ color: colors.primary, fontFamily: fonts.black, fontSize: 24 }}>${finalTotal.toFixed(2)}</Text>
+            </View>
+            <Button
+                title={isOffline ? "Save Offline" : "Checkout"}
+                onPress={onCheckout}
+                loading={isProcessing}
+                icon={<Ionicons name="arrow-forward" size={18} color="#FFF" />}
+            />
+        </View>
+    );
+};
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-    },
-    emptyIconContainer: {
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: 'rgba(142, 142, 147, 0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 24,
-    },
-    emptyTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        marginBottom: 8,
-    },
-    emptySubtitle: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginBottom: 32,
-    },
-    loadingText: {
-        fontSize: 16,
-        marginTop: 16,
-    },
-    shopNowButton: {
-        backgroundColor: colors.primary,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 28,
-        paddingVertical: 16,
-        borderRadius: 16,
-        gap: 10,
-    },
-    shopNowText: {
-        color: colors.white,
-        fontSize: 17,
-        fontWeight: '700',
-    },
+    container: { flex: 1 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     offlineBanner: {
         backgroundColor: colors.accent,
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        gap: 8,
+        padding: 6,
+        gap: 6,
+        alignItems: 'center'
     },
-    offlineBannerText: {
-        color: colors.white,
-        fontSize: 13,
-        fontWeight: '600',
-    },
+    offlineText: { color: '#FFF', fontSize: 12, fontFamily: fonts.bold },
     header: {
+        padding: theme.spacing.lg,
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        paddingHorizontal: 20,
-        marginTop: 16,
-        marginBottom: 16,
+        alignItems: 'flex-end'
     },
-    headerTitle: {
-        fontSize: 32,
-        fontWeight: '800',
-        letterSpacing: -0.5,
+    title: { fontSize: 32, fontFamily: fonts.black, letterSpacing: -1 },
+    linkText: { color: colors.primary, fontFamily: fonts.bold },
+    scrollContent: {
+        paddingBottom: 250,
+        paddingHorizontal: theme.spacing.lg
     },
-    itemCount: {
-        fontSize: 14,
-        marginTop: 4,
-    },
-    pendingText: {
-        color: colors.accent,
-        fontWeight: '600',
-    },
-    clearButton: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-    },
-    editText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.primary,
-    },
-    wishlistSection: {
-        marginBottom: 20,
-    },
-    wishlistHeader: {
-        flexDirection: 'row',
+
+    // Empty View Styles
+    emptyCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(150,150,150,0.1)',
+        justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        marginBottom: 12,
-        gap: 8,
+        marginBottom: 20
     },
-    wishlistHeaderText: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    wishlistList: {
-        paddingHorizontal: 20,
-        gap: 12,
-    },
-    wishlistItem: {
-        width: 140,
-        padding: 12,
+    emptyTitle: { fontSize: 24, fontFamily: fonts.bold, marginBottom: 8 },
+    emptySub: { fontSize: 16, fontFamily: fonts.medium },
+
+    // Wishlist Styles
+    wishSection: { marginBottom: 24 },
+    sectionTitle: { fontSize: 18, fontFamily: fonts.bold, marginBottom: 12 },
+    favCard: {
+        width: 120,
+        padding: 10,
         borderRadius: 16,
-        marginRight: 12,
         alignItems: 'center',
+        position: 'relative'
     },
-    wishlistImage: {
-        width: 80,
-        height: 80,
-        marginBottom: 8,
-    },
-    wishlistTitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 4,
-    },
-    wishlistPrice: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: colors.primary,
-        marginBottom: 8,
-    },
-    wishlistDeleteButton: {
+    removeFav: {
         position: 'absolute',
-        top: 4,
-        right: 4,
+        top: 6,
+        right: 6,
         backgroundColor: colors.error,
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 10,
+        zIndex: 10
     },
-    wishlistContent: {
-        alignItems: 'center',
-        width: '100%',
-    },
-    addFromWishlist: {
+    favContent: { alignItems: 'center', width: '100%' },
+    favImg: { width: 64, height: 64, marginBottom: 8 },
+    favTitle: { fontSize: 11, fontFamily: fonts.semiBold, textAlign: 'center', marginBottom: 2 },
+    favPrice: { fontSize: 12, fontFamily: fonts.bold, color: colors.primary },
+    favAdd: {
+        marginTop: 8,
         backgroundColor: colors.primary,
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        paddingHorizontal: 20,
-        marginBottom: 12,
-    },
-    cartItemsContainer: {
-        paddingTop: 8,
-    },
-    cartItemWrapper: {
-        paddingHorizontal: 20,
-        marginBottom: 12,
-    },
-    syncAlert: {
-        backgroundColor: 'rgba(255, 149, 0, 0.12)',
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 20,
-        marginBottom: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
+        width: 24,
+        height: 24,
         borderRadius: 12,
-        gap: 8,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
-    syncAlertText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: colors.accent,
-    },
+
+    // Footer Styles
     footer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        paddingHorizontal: 24,
-        paddingTop: 20,
-        paddingBottom: 20,
+        padding: 24,
+        paddingBottom: 40,
+        borderTopWidth: 1,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -8 },
-        shadowOpacity: 0.08,
-        shadowRadius: 16,
-        elevation: 12,
+        shadowColor: "#000",
+        shadowOffset: { height: -4, width: 0 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 10
     },
-    summarySection: {},
-    summaryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    totalRow: {
-        marginBottom: 16,
-    },
-    summaryLabel: {
-        fontSize: 14,
-    },
-    summaryValue: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    totalLabel: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    totalValue: {
-        fontSize: 24,
-        fontWeight: '900',
-    },
-    checkoutButton: {
-        backgroundColor: colors.primary,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 16,
-        gap: 10,
-    },
-    checkoutButtonLoading: {
-        opacity: 0.7,
-    },
-    checkoutButtonOffline: {
-        backgroundColor: colors.accent,
-    },
-    checkoutText: {
-        fontSize: 17,
-        fontWeight: '700',
-        color: colors.white,
-    },
-    secureRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 12,
-        gap: 6,
-    },
-    secureText: {
-        fontSize: 12,
-        fontWeight: '500',
-    },
+    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    divider: { height: 1, marginVertical: 12 },
 });
 
 export default Cart;

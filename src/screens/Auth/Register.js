@@ -1,30 +1,46 @@
 /**
  * @fileoverview Registration Screen
- * @description User signup form with name, email, password validation.
- * Creates user in Firebase Auth + Firestore and initiates session.
+ * @module screens/Auth/Register
+ * @description Handles new account creation. validation, service calls, and
+ * session initialization. Features consistent Elite UI styling.
  */
+
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView
+} from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
+// Logic
 import { setUser } from '../../store/authSlice';
 import { insertSession } from '../../db';
 import { signUp } from '../../services/authService';
 import { colors } from '../../global/colors';
+import { registerSchema } from '../../utils/validationSchemas';
+
+// Components
+import ParticlesBackground from '../../components/3d/ParticlesBackground';
 import InputField from '../../components/common/InputField';
 import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
-import { registerSchema } from '../../utils/validationSchemas';
 
 const Register = ({ navigation }) => {
     const dispatch = useDispatch();
+    const { alertConfig, showAlert, hideAlert } = useCustomAlert();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const { alertConfig, showAlert, hideAlert } = useCustomAlert();
 
     const { control, handleSubmit, formState: { errors, isValid }, setValue, watch } = useForm({
         resolver: yupResolver(registerSchema),
@@ -40,7 +56,7 @@ const Register = ({ navigation }) => {
 
     const acceptTerms = watch('acceptTerms');
 
-    const onSubmit = async (data) => {
+    const handleRegister = async (data) => {
         setIsLoading(true);
         try {
             const user = await signUp(data.email, data.password, data.name);
@@ -48,36 +64,33 @@ const Register = ({ navigation }) => {
             await insertSession(user);
             showAlert('Account Created!', 'Your account has been created successfully.', [{ text: 'OK' }], 'checkmark-circle-outline');
         } catch (error) {
-            showAlert('Error', error.message, [{ text: 'OK' }], 'alert-circle-outline');
+            showAlert('Registration Error', error.message || 'Could not create account', [{ text: 'OK' }], 'alert-circle-outline');
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <ParticlesBackground />
             <CustomAlert {...alertConfig} onClose={hideAlert} />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
-            >
-                <ScrollView
-                    contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View style={styles.header}>
-                        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                            <Ionicons name="arrow-back" size={24} color={colors.text} />
-                        </TouchableOpacity>
-                        <View>
-                            <Text style={styles.headerTitle}>Create Account</Text>
-                            <Text style={styles.headerSubtitle}>Fill in your details to get started</Text>
-                        </View>
-                    </View>
 
-                    <View style={styles.formContainer}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+
+                    <SafeAreaView style={styles.header}>
+                        <TouchableOpacity style={styles.glassButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+                            <Ionicons name="arrow-back" size={24} color={colors.white} />
+                        </TouchableOpacity>
+                        <View style={{ flex: 1, marginLeft: 20 }}>
+                            <Text style={styles.headerTitle}>Create Account</Text>
+                            <Text style={styles.headerSubtitle}>Join the future of tech.</Text>
+                        </View>
+                    </SafeAreaView>
+
+                    <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.glassContainer}>
+
                         <Controller
                             control={control}
                             name="name"
@@ -91,6 +104,7 @@ const Register = ({ navigation }) => {
                                     error={errors.name?.message}
                                     icon="person-outline"
                                     autoCapitalize="words"
+                                    darkMode
                                 />
                             )}
                         />
@@ -109,6 +123,7 @@ const Register = ({ navigation }) => {
                                     keyboardType="email-address"
                                     autoCapitalize="none"
                                     icon="mail-outline"
+                                    darkMode
                                 />
                             )}
                         />
@@ -128,6 +143,7 @@ const Register = ({ navigation }) => {
                                     icon="lock-closed-outline"
                                     rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
                                     onRightIconPress={() => setShowPassword(!showPassword)}
+                                    darkMode
                                 />
                             )}
                         />
@@ -147,6 +163,7 @@ const Register = ({ navigation }) => {
                                     icon="lock-closed-outline"
                                     rightIcon={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
                                     onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    darkMode
                                 />
                             )}
                         />
@@ -154,6 +171,7 @@ const Register = ({ navigation }) => {
                         <TouchableOpacity
                             style={styles.termsContainer}
                             onPress={() => setValue('acceptTerms', !acceptTerms)}
+                            activeOpacity={0.8}
                         >
                             <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
                                 {acceptTerms && <Ionicons name="checkmark" size={14} color={colors.white} />}
@@ -166,12 +184,11 @@ const Register = ({ navigation }) => {
 
                         <TouchableOpacity
                             style={[styles.registerButton, (!isValid || isLoading) && styles.registerButtonDisabled]}
-                            onPress={handleSubmit(onSubmit)}
+                            onPress={handleSubmit(handleRegister)}
                             disabled={!isValid || isLoading}
+                            activeOpacity={0.8}
                         >
-                            <Text style={styles.registerButtonText}>
-                                {isLoading ? 'Creating account...' : 'Create Account'}
-                            </Text>
+                            <Text style={styles.registerButtonText}>{isLoading ? 'Creating account...' : 'Create Account'}</Text>
                             {!isLoading && <Ionicons name="arrow-forward" size={20} color={colors.white} />}
                         </TouchableOpacity>
 
@@ -181,124 +198,34 @@ const Register = ({ navigation }) => {
                                 <Text style={styles.linkText}>Sign In</Text>
                             </TouchableOpacity>
                         </View>
-                    </View>
+                    </Animated.View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: colors.white,
-    },
+    container: { flex: 1, backgroundColor: '#050510' },
     keyboardView: { flex: 1 },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
-    },
-    header: {
-        marginTop: 10,
-        marginBottom: 30,
-    },
-    backButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: colors.background,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    headerTitle: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: colors.text,
-        marginBottom: 8,
-    },
-    headerSubtitle: {
-        fontSize: 14,
-        color: colors.textLight,
-    },
-    formContainer: { flex: 1 },
-    termsContainer: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        marginVertical: 16,
-    },
-    checkbox: {
-        width: 22,
-        height: 22,
-        borderRadius: 6,
-        borderWidth: 2,
-        borderColor: colors.border,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12,
-        marginTop: 2,
-    },
-    checkboxChecked: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
-    },
-    termsText: {
-        flex: 1,
-        fontSize: 14,
-        color: colors.text,
-        lineHeight: 22,
-    },
-    termsLink: {
-        color: colors.primary,
-        fontWeight: '600',
-    },
-    termsError: {
-        fontSize: 12,
-        color: colors.error,
-        marginTop: -10,
-        marginBottom: 10,
-    },
-    registerButton: {
-        backgroundColor: colors.primary,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 16,
-        marginTop: 10,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: { elevation: 8 },
-            web: { boxShadow: `0px 4px 10px ${colors.primary}4D` }
-        })
-    },
+    scrollContent: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 40 },
+    header: { flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 30 },
+    glassButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+    headerTitle: { fontSize: 28, fontWeight: '800', color: colors.white, marginBottom: 4 },
+    headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+    glassContainer: { backgroundColor: 'rgba(20, 20, 30, 0.7)', borderRadius: 30, padding: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden', ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.5, shadowRadius: 20 }, web: { backdropFilter: 'blur(20px)' } }) },
+    termsContainer: { flexDirection: 'row', alignItems: 'flex-start', marginVertical: 16 },
+    checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 },
+    checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+    termsText: { flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 22 },
+    termsLink: { color: colors.primary, fontWeight: '600' },
+    termsError: { fontSize: 12, color: colors.error, marginTop: -10, marginBottom: 10 },
+    registerButton: { backgroundColor: colors.primary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 16, borderRadius: 16, marginTop: 10, shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 },
     registerButtonDisabled: { opacity: 0.6 },
-    registerButtonText: {
-        color: colors.white,
-        fontSize: 18,
-        fontWeight: '700',
-        marginRight: 10,
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 24,
-        marginBottom: 30,
-    },
-    footerText: {
-        color: colors.textLight,
-        fontSize: 14,
-    },
-    linkText: {
-        color: colors.primary,
-        fontSize: 14,
-        fontWeight: '700',
-    },
+    registerButtonText: { color: colors.white, fontSize: 18, fontWeight: '700', marginRight: 10 },
+    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24, marginBottom: 10 },
+    footerText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+    linkText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
 });
 
 export default Register;

@@ -1,47 +1,38 @@
 /**
- * @fileoverview Theme Color Palettes
- * @description Defines light and dark color schemes for consistent app theming.
- * Use getColors(isDarkMode) to get the appropriate palette based on user preference.
+ * @fileoverview Theme Color Palettes (TechZone Elite)
+ * @description Defines premium light and dark color schemes.
  */
 
-/** Light theme (default) */
 export const lightColors = {
-    primary: '#007AFF',
-    darkBackground: '#1A1A1A',
+    primary: '#CA8A04', // Gold
+    secondary: '#44403C', // Stone 700
+    background: '#FAFAF9', // Warm Off-white
     cardBackground: '#FFFFFF',
-    text: '#1C1C1E',
-    textLight: '#8E8E93',
-    background: '#F2F2F7',
+    text: '#1C1917', // Nearly Black
+    textLight: '#57534E', // Stone 500
     white: '#FFFFFF',
-    error: '#FF3B30',
-    success: '#34C759',
-    secondary: '#5856D6',
-    accent: '#FF9500',
-    border: '#E5E5EA',
+    error: '#DC2626',
+    success: '#16A34A',
+    accent: '#CA8A04',
+    border: '#E7E5E4',
+    darkBackground: '#1C1917',
 };
 
-/** Dark theme */
 export const darkColors = {
-    primary: '#0A84FF',
-    darkBackground: '#000000',
-    cardBackground: '#1C1C1E',
-    text: '#FFFFFF',
-    textLight: '#8E8E93',
-    background: '#000000',
+    primary: '#CA8A04',
+    secondary: '#D6D3D1',
+    background: '#0C0A09', // Deep Dark
+    cardBackground: '#1C1917', // Stone 900
+    text: '#FAFAF9', // Off-white
+    textLight: '#A8A29E', // Stone 400
     white: '#FFFFFF',
-    error: '#FF453A',
-    success: '#32D74B',
-    secondary: '#5E5CE6',
-    accent: '#FF9F0A',
-    border: '#38383A',
+    error: '#EF4444',
+    success: '#22C55E',
+    accent: '#FACC15',
+    border: '#292524',
+    darkBackground: '#000000',
 };
 
-/** Default export for backwards compatibility */
 export const colors = lightColors;
 
-/**
- * @description Returns color palette based on theme preference
- * @param {boolean} isDarkMode - True for dark theme, false for light
- * @returns {typeof lightColors} Color palette object
- */
 export const getColors = (isDarkMode) => (isDarkMode ? darkColors : lightColors);

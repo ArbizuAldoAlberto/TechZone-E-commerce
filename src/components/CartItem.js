@@ -1,20 +1,14 @@
 /**
- * @fileoverview Cart Item Component
- * @description Renders a single item in the shopping cart.
- * Features:
- * - Displays product image, title, price, and quantity
- * - Controls for incrementing/decrementing quantity
- * - Remove item button
- * - Pending sync status indicator for offline items
- * - Web-compatible touch handling
+ * @fileoverview Cart Item Component (Elite)
  */
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import { colors, getColors } from '../global/colors';
 import { fonts } from '../global/fonts';
+import { theme } from '../global/theme';
 import { Ionicons } from '@expo/vector-icons';
 
-// Helper to stop event propagation cross-platform
+// Helper to stop event propagation
 const stopPropagation = (e, callback) => {
     if (Platform.OS === 'web') {
         e?.preventDefault?.();
@@ -28,26 +22,27 @@ const stopPropagation = (e, callback) => {
 
 const CartItem = ({ item, onIncrement, onDecrement, onRemove, onPress, isDarkMode = false }) => {
     const themeColors = getColors(isDarkMode);
-    const dynamicStyles = getDynamicStyles(isDarkMode, themeColors);
-
-    // Use Pressable for better web compatibility
     const ButtonWrapper = Platform.OS === 'web' ? Pressable : TouchableOpacity;
+
+    // Dynamic styles based on theme
+    const containerBg = isDarkMode ? '#1C1917' : colors.white;
+    const imgBg = isDarkMode ? '#292524' : '#F5F5F4';
 
     return (
         <ButtonWrapper
-            style={[styles.container, dynamicStyles.container]}
+            style={[styles.container, { backgroundColor: containerBg }]}
             onPress={onPress}
-            {...(Platform.OS !== 'web' && { activeOpacity: 0.8 })}
+            activeOpacity={0.9}
         >
-            {/* Pending sync indicator - Corner badge */}
+            {/* Pending Badge */}
             {item.isPending && (
                 <View style={styles.pendingBadge}>
                     <Ionicons name="cloud-offline" size={12} color={colors.white} />
                 </View>
             )}
 
-            {/* Product Image */}
-            <View style={[styles.imageContainer, dynamicStyles.imageContainer]}>
+            {/* Image */}
+            <View style={[styles.imageContainer, { backgroundColor: imgBg }]}>
                 <Image
                     source={{ uri: item.image || item.thumbnail }}
                     style={styles.image}
@@ -55,61 +50,50 @@ const CartItem = ({ item, onIncrement, onDecrement, onRemove, onPress, isDarkMod
                 />
             </View>
 
-            {/* Product Info */}
+            {/* Info */}
             <View style={styles.infoContainer}>
                 <View style={styles.topRow}>
-                    <View style={styles.titleContainer}>
-                        <Text style={[styles.title, dynamicStyles.text]} numberOfLines={2}>
-                            {item.title || item.name}
+                    <View style={{ flex: 1 }}>
+                        <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>
+                            {item.title}
                         </Text>
                         {item.isPending && (
-                            <View style={styles.syncBadge}>
-                                <Ionicons name="sync-outline" size={12} color={colors.accent} />
-                                <Text style={styles.syncText}>Pending Sync</Text>
+                            <View style={styles.syncRow}>
+                                <Ionicons name="sync" size={10} color={colors.accent} />
+                                <Text style={styles.syncText}>Syncing</Text>
                             </View>
                         )}
+                        <Text style={[styles.category, { color: themeColors.textLight }]}>{item.category || 'Product'}</Text>
                     </View>
-                    <ButtonWrapper
-                        onPress={(e) => stopPropagation(e, onRemove)}
-                        style={styles.deleteButton}
-                        {...(Platform.OS !== 'web' && { activeOpacity: 0.7 })}
-                    >
-                        <Ionicons name="trash-outline" size={18} color={colors.error} />
-                    </ButtonWrapper>
-                </View>
 
-                {item.category && (
-                    <Text style={[styles.category, dynamicStyles.textLight]}>{item.category}</Text>
-                )}
+                    <TouchableOpacity onPress={(e) => stopPropagation(e, onRemove)} style={styles.deleteBtn}>
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                    </TouchableOpacity>
+                </View>
 
                 <View style={styles.bottomRow}>
                     <View>
-                        <Text style={[styles.price, dynamicStyles.primaryText]}>
-                            ${item.price.toFixed(2)}
+                        <Text style={[styles.price, { color: themeColors.text }]}>${item.price}</Text>
+                        <Text style={[styles.subtotal, { color: themeColors.textLight }]}>
+                            x {item.quantity}
                         </Text>
-                        {item.quantity > 1 && (
-                            <Text style={[styles.totalPrice, dynamicStyles.textLight]}>
-                                Total: ${(item.price * item.quantity).toFixed(2)}
-                            </Text>
-                        )}
                     </View>
 
-                    <View style={[styles.quantityContainer, dynamicStyles.quantityContainer]}>
-                        <ButtonWrapper
+                    {/* Quantity Control */}
+                    <View style={[styles.qtyControl, { backgroundColor: isDarkMode ? '#292524' : '#F5F5F4' }]}>
+                        <TouchableOpacity
                             onPress={(e) => stopPropagation(e, onDecrement)}
-                            style={[styles.qtyButton, styles.qtyButtonMinus]}
-                            {...(Platform.OS !== 'web' && { activeOpacity: 0.7 })}
+                            style={styles.qtyBtn}
                         >
-                            <Ionicons name="remove" size={16} color={themeColors.text} />
-                        </ButtonWrapper>
-                        <Text style={[styles.quantity, dynamicStyles.text]}>{item.quantity}</Text>
-                        <ButtonWrapper
+                            <Ionicons name="remove" size={14} color={themeColors.text} />
+                        </TouchableOpacity>
+                        <Text style={[styles.qtyText, { color: themeColors.text }]}>{item.quantity}</Text>
+                        <TouchableOpacity
                             onPress={(e) => stopPropagation(e, onIncrement)}
-                            style={[styles.qtyButton, styles.qtyButtonPlus]}
-                            {...(Platform.OS !== 'web' && { activeOpacity: 0.7 })}
+                            style={[styles.qtyBtn, { backgroundColor: colors.primary }]}
                         >
-                            <Ionicons name="add" size={16} color={colors.white} />
-                        </ButtonWrapper>
+                            <Ionicons name="add" size={14} color="#FFF" />
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
@@ -117,169 +101,51 @@ const CartItem = ({ item, onIncrement, onDecrement, onRemove, onPress, isDarkMod
     );
 };
 
-const getDynamicStyles = (isDarkMode, themeColors) => StyleSheet.create({
-    container: {
-        backgroundColor: isDarkMode ? '#1C1C1E' : colors.white,
-    },
-    imageContainer: {
-        backgroundColor: isDarkMode ? '#2C2C2E' : '#F8F9FA',
-    },
-    text: {
-        color: themeColors.text,
-    },
-    textLight: {
-        color: themeColors.textLight,
-    },
-    primaryText: {
-        color: themeColors.primary,
-    },
-    quantityContainer: {
-        backgroundColor: isDarkMode ? '#2C2C2E' : colors.background,
-    },
-});
-
 const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
-        borderRadius: 20,
-        padding: 14,
+        padding: 12,
+        borderRadius: theme.borderRadius.lg, // 16px
+        marginBottom: theme.spacing.md,
         alignItems: 'center',
-        position: 'relative',
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.08,
-                shadowRadius: 12,
-            },
-            android: {
-                elevation: 4,
-            },
-            web: {
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            }
-        })
+        ...theme.shadows.sm, // Elite shadow token
+        // Web shadow fix
+        ...Platform.select({ web: { boxShadow: '0 4px 12px rgba(0,0,0,0.05)' } })
     },
     pendingBadge: {
         position: 'absolute',
-        top: -4,
-        right: -4,
+        top: -6, right: -6,
         backgroundColor: colors.accent,
+        width: 24, height: 24,
         borderRadius: 12,
-        width: 24,
-        height: 24,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 10,
         borderWidth: 2,
-        borderColor: colors.white,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.accent,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-            },
-            android: {
-                elevation: 4,
-            },
-            web: {
-                boxShadow: `0 2px 4px ${colors.accent}4D`,
-            }
-        })
+        borderColor: colors.white
     },
     imageContainer: {
-        width: 90,
-        height: 90,
-        borderRadius: 16,
+        width: 80,
+        height: 80,
+        borderRadius: theme.borderRadius.md,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
+        marginRight: theme.spacing.md,
     },
-    image: {
-        width: '85%',
-        height: '85%',
-    },
-    infoContainer: {
-        flex: 1,
-    },
-    topRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 4,
-    },
-    titleContainer: {
-        flex: 1,
-        marginRight: 8,
-    },
-    title: {
-        fontSize: 15,
-        fontWeight: '700',
-        fontFamily: fonts.bold,
-        lineHeight: 20,
-    },
-    syncBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 6,
-        backgroundColor: 'rgba(255, 149, 0, 0.12)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-        gap: 4,
-    },
-    syncText: {
-        fontSize: 10,
-        color: colors.accent,
-        fontWeight: '700',
-    },
-    deleteButton: {
-        padding: 6,
-        backgroundColor: 'rgba(255, 59, 48, 0.1)',
-        borderRadius: 10,
-    },
-    category: {
-        fontSize: 12,
-        marginBottom: 10,
-        fontFamily: fonts.regular,
-    },
-    bottomRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    price: {
-        fontSize: 18,
-        fontWeight: '800',
-    },
-    totalPrice: {
-        fontSize: 11,
-        marginTop: 2,
-    },
-    quantityContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderRadius: 14,
-        overflow: 'hidden',
-    },
-    qtyButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-    },
-    qtyButtonMinus: {
-        backgroundColor: 'transparent',
-    },
-    qtyButtonPlus: {
-        backgroundColor: colors.primary,
-    },
-    quantity: {
-        fontSize: 16,
-        fontWeight: '700',
-        minWidth: 28,
-        textAlign: 'center',
-    },
+    image: { width: '80%', height: '80%' },
+    infoContainer: { flex: 1, justifyContent: 'space-between', height: 80 },
+    topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    title: { fontFamily: fonts.bold, fontSize: 13, marginBottom: 2 },
+    syncRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 },
+    syncText: { fontSize: 10, color: colors.accent, fontFamily: fonts.bold },
+    category: { fontSize: 11, fontFamily: fonts.medium },
+    deleteBtn: { padding: 6, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 },
+    bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+    price: { fontFamily: fonts.bold, fontSize: 15 },
+    subtotal: { fontSize: 10, fontFamily: fonts.medium },
+    qtyControl: { flexDirection: 'row', alignItems: 'center', borderRadius: 8, padding: 2 },
+    qtyBtn: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center', borderRadius: 6 },
+    qtyText: { fontFamily: fonts.bold, fontSize: 12, minWidth: 20, textAlign: 'center' },
 });
 
 export default CartItem;

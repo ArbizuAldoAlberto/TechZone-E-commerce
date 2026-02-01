@@ -13,26 +13,31 @@ coverage/
 *.keystore
 !debug.keystore
 
-# Build folders
+# Build artifacts
+*.apk
+*.aab
 dist/
 web-build/
 build/
 
-# Environement variables (CRITICAL)
+# Environment variables (CRITICAL)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 *.env
-
-# Firebase Config (PROTECTED)
-# Prevents committing API Keys to public repo
-src/firebase/config.js
+.env*
+!.env.example
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# IDES
+.vscode/
+.idea/
 
 # IDEs
 .idea/

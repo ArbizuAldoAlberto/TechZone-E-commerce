@@ -1,10 +1,12 @@
 /**
  * @fileoverview Font Constants
- * @description Centralized font configuration for uniform typography.
- * Currently uses System fonts (San Francisco on iOS, Roboto on Android).
+ * @description Centralized font configuration.
+ * @note Implements 'Inter' typeface via System fallback for now.
  */
 export const fonts = {
     regular: 'System',
+    medium: 'System',
+    semiBold: 'System',
     bold: 'System',
     title: 'System',
 };

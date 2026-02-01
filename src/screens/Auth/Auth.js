@@ -1,29 +1,55 @@
 /**
- * @fileoverview Login Screen
- * @description Authentication entry point. Supports email/password login and demo mode.
- * Persists session locally (SQLite) and globally (Redux).
+ * @fileoverview Login Screen (TechZone Elite)
+ * @description Immersive authentication entry point with particle effects and glassmorphism.
+ * Handles user login, demo access, and navigation to registration.
+ * 
+ * @module screens/Auth
  */
+
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    StatusBar,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TouchableOpacity
+} from 'react-native';
 import { useDispatch } from 'react-redux';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Logic & Data
 import { setUser } from '../../store/authSlice';
 import { insertSession } from '../../db';
 import { signIn } from '../../services/authService';
 import { colors } from '../../global/colors';
-import InputField from '../../components/common/InputField';
-import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
 import { loginSchema } from '../../utils/validationSchemas';
+import { theme } from '../../global/theme';
+import { fonts } from '../../global/fonts';
 
+// Components
+import ParticlesBackground from '../../components/3d/ParticlesBackground';
+import InputField from '../../components/common/InputField';
+import Button from '../../components/common/Button';
+import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert';
+
+/**
+ * @component Auth
+ * @description Authentication screen component.
+ * @param {object} props - Component props.
+ * @param {object} props.navigation - React Navigation prop.
+ */
 const Auth = ({ navigation }) => {
     const dispatch = useDispatch();
+    const { alertConfig, showAlert, hideAlert } = useCustomAlert();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const { alertConfig, showAlert, hideAlert } = useCustomAlert();
 
     const { control, handleSubmit, formState: { errors, isValid } } = useForm({
         resolver: yupResolver(loginSchema),
@@ -31,52 +57,68 @@ const Auth = ({ navigation }) => {
         defaultValues: { email: '', password: '' }
     });
 
-    const onSubmit = async (data) => {
+    /**
+     * @function processLogin
+     * @description Handles state updates and session persistence after successful login.
+     * @param {object} userPayload - User data object.
+     */
+    const processLogin = async (userPayload) => {
+        dispatch(setUser(userPayload));
+        try {
+            await insertSession(userPayload);
+        } catch (e) {
+            console.warn('Session persistence failed', e);
+        }
+    };
+
+    const handleLogin = async (data) => {
         setIsLoading(true);
         try {
             const user = await signIn(data.email, data.password);
-            dispatch(setUser(user));
-            await insertSession(user);
+            await processLogin(user);
         } catch (error) {
-            showAlert('Authentication Error', error.message, [{ text: 'OK' }], 'alert-circle-outline');
+            showAlert('Authentication Error', error.message || 'Invalid credentials', [{ text: 'OK' }], 'alert-circle-outline');
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleDemoLogin = async () => {
-        const user = { email: 'demo@techzone.io', token: 'demo-token', localId: 'demo-id' };
-        dispatch(setUser(user));
-        try {
-            await insertSession(user);
-        } catch {
-            // Silently fail session save for demo
-        }
+        await processLogin({
+            email: 'demo@techzone.io',
+            token: 'demo-token-mock',
+            localId: 'demo-user-id'
+        });
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="light-content" />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <ParticlesBackground />
             <CustomAlert {...alertConfig} onClose={hideAlert} />
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.keyboardView}
-            >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    <View style={Platform.OS === 'web' ? styles.webContainer : null}>
-                        <View style={styles.topSection}>
+
+            <SafeAreaView style={{ flex: 1 }}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.keyboardView}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        {/* Brand Section */}
+                        <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topSection}>
                             <View style={styles.logoContainer}>
-                                <Ionicons name="flash" size={60} color={colors.white} />
+                                <Ionicons name="flash" size={48} color={colors.primary} />
                             </View>
                             <Text style={styles.title}>TechZone</Text>
-                            <Text style={styles.subtitle}>Your Premium Tech Hub</Text>
-                        </View>
+                            <Text style={styles.subtitle}>ELITE COMMERCE</Text>
+                        </Animated.View>
 
-                        <View style={styles.bottomSection}>
+                        {/* Glass Form Card */}
+                        <Animated.View entering={FadeInUp.duration(1000).delay(200).springify()} style={styles.glassContainer}>
                             <Text style={styles.welcomeText}>Welcome Back</Text>
-                            <Text style={styles.instructionText}>
-                                Log in to access your dashboard and shop the latest tech.
-                            </Text>
+                            <Text style={styles.instructionText}>Login to access your dashboard.</Text>
 
                             <Controller
                                 control={control}
@@ -84,14 +126,14 @@ const Auth = ({ navigation }) => {
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <InputField
                                         label="Email"
-                                        placeholder="Enter your email"
+                                        placeholder="name@example.com"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
                                         error={errors.email?.message}
                                         keyboardType="email-address"
-                                        autoCapitalize="none"
                                         icon="mail-outline"
+                                        darkMode
                                     />
                                 )}
                             />
@@ -102,7 +144,7 @@ const Auth = ({ navigation }) => {
                                 render={({ field: { onChange, onBlur, value } }) => (
                                     <InputField
                                         label="Password"
-                                        placeholder="Enter your password"
+                                        placeholder="Enter password"
                                         value={value}
                                         onChangeText={onChange}
                                         onBlur={onBlur}
@@ -111,6 +153,7 @@ const Auth = ({ navigation }) => {
                                         icon="lock-closed-outline"
                                         rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
                                         onRightIconPress={() => setShowPassword(!showPassword)}
+                                        darkMode
                                     />
                                 )}
                             />
@@ -122,202 +165,144 @@ const Auth = ({ navigation }) => {
                                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[styles.loginButton, (!isValid || isLoading) && styles.loginButtonDisabled]}
-                                onPress={handleSubmit(onSubmit)}
-                                disabled={!isValid || isLoading}
-                            >
-                                <Text style={styles.loginButtonText}>
-                                    {isLoading ? 'Signing in...' : 'Sign In'}
-                                </Text>
-                                {!isLoading && <Ionicons name="arrow-forward" size={20} color={colors.white} />}
-                            </TouchableOpacity>
+                            <View style={styles.actions}>
+                                <Button
+                                    title="Sign In"
+                                    onPress={handleSubmit(handleLogin)}
+                                    loading={isLoading}
+                                    disabled={!isValid}
+                                    type="primary"
+                                    icon={<Ionicons name="arrow-forward" size={18} color={colors.white} />}
+                                    style={styles.mainButton}
+                                />
 
-                            <TouchableOpacity style={styles.demoButton} onPress={handleDemoLogin}>
-                                <Text style={styles.demoButtonText}>Enter as Demo User</Text>
-                            </TouchableOpacity>
+                                <Button
+                                    title="Demo Mode"
+                                    onPress={handleDemoLogin}
+                                    type="secondary"
+                                    icon={<Ionicons name="key-outline" size={18} color={colors.white} />}
+                                />
 
-                            <View style={styles.registerSection}>
-                                <View style={styles.registerDivider} />
-                                <Text style={styles.registerPromptText}>New to TechZone?</Text>
-                                <TouchableOpacity
-                                    style={styles.registerButton}
+                                <View style={styles.divider}>
+                                    <View style={styles.line} />
+                                    <Text style={styles.orText}>OR</Text>
+                                    <View style={styles.line} />
+                                </View>
+
+                                <Button
+                                    title="Create Account"
                                     onPress={() => navigation.navigate('Register')}
-                                    activeOpacity={0.85}
-                                >
-                                    <Ionicons name="person-add-outline" size={20} color={colors.white} />
-                                    <Text style={styles.registerButtonText}>Create New Account</Text>
-                                    <Ionicons name="arrow-forward" size={18} color={colors.white} />
-                                </TouchableOpacity>
+                                    type="outline"
+                                    icon={<Ionicons name="person-add-outline" size={18} color={colors.primary} />}
+                                />
                             </View>
-                        </View>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+
+                        </Animated.View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.primary,
+        backgroundColor: '#050510'
     },
-    keyboardView: { flex: 1 },
+    keyboardView: {
+        flex: 1
+    },
     scrollContent: {
         flexGrow: 1,
-        ...(Platform.OS === 'web' && {
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-        }),
-    },
-    webContainer: {
-        width: '100%',
-        maxWidth: 480,
-        alignSelf: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: theme.spacing.lg,
+        paddingVertical: theme.spacing.xl
     },
     topSection: {
-        ...(Platform.OS === 'web' ? { paddingVertical: 40 } : { flex: 0.4 }),
-        justifyContent: 'center',
         alignItems: 'center',
-        paddingTop: 20,
+        marginBottom: theme.spacing.xl
     },
     logoContainer: {
-        width: 120,
-        height: 120,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: 60,
+        width: 80,
+        height: 80,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 40,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: theme.spacing.md,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)'
     },
     title: {
-        fontSize: 40,
-        fontWeight: '900',
+        fontSize: 32,
+        fontFamily: fonts.bold,
         color: colors.white,
+        letterSpacing: 1
     },
     subtitle: {
-        fontSize: 16,
-        color: 'rgba(255,255,255,0.8)',
-        fontWeight: '500',
+        fontSize: 12,
+        color: colors.primary,
+        fontFamily: fonts.medium,
+        letterSpacing: 4,
+        marginTop: 4
     },
-    bottomSection: {
-        ...(Platform.OS === 'web' ? { paddingVertical: 40 } : { flex: 0.6 }),
-        backgroundColor: colors.white,
-        borderTopLeftRadius: 40,
-        borderTopRightRadius: 40,
-        padding: 30,
-        paddingTop: 40,
-        ...(Platform.OS === 'web' && {
-            boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.15)',
-        }),
+    glassContainer: {
+        backgroundColor: 'rgba(20, 20, 30, 0.75)',
+        borderRadius: theme.borderRadius.xl,
+        padding: theme.spacing.xl,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+        ...Platform.select({
+            web: { backdropFilter: 'blur(20px)' }
+        })
     },
     welcomeText: {
-        fontSize: 28,
-        fontWeight: '800',
-        color: colors.text,
+        fontSize: 24,
+        fontFamily: fonts.bold,
+        color: colors.white,
         marginBottom: 8,
+        textAlign: 'center'
     },
     instructionText: {
         fontSize: 14,
-        color: colors.textLight,
-        lineHeight: 22,
-        marginBottom: 30,
+        color: '#A1A1AA',
+        marginBottom: theme.spacing.xl,
+        textAlign: 'center',
+        fontFamily: fonts.regular
     },
     forgotPassword: {
         alignSelf: 'flex-end',
-        marginBottom: 20,
+        marginBottom: theme.spacing.lg,
+        marginTop: -theme.spacing.sm
     },
     forgotPasswordText: {
         color: colors.primary,
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 13,
+        fontFamily: fonts.medium
     },
-    loginButton: {
-        backgroundColor: colors.primary,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 16,
-        marginBottom: 12,
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: { elevation: 8 },
-            web: { boxShadow: `0px 4px 10px ${colors.primary}4D` }
-        })
+    actions: {
+        gap: theme.spacing.md
     },
-    loginButtonDisabled: { opacity: 0.6 },
-    loginButtonText: {
-        color: colors.white,
-        fontSize: 18,
-        fontWeight: '700',
-        marginRight: 10,
+    mainButton: {
+        marginBottom: theme.spacing.xs
     },
-    demoButton: {
-        backgroundColor: colors.background,
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingVertical: 14,
-        borderRadius: 16,
-        marginBottom: 20,
-    },
-    demoButtonText: {
-        color: colors.text,
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    registerSection: {
-        marginTop: 24,
-        paddingTop: 24,
-        paddingBottom: 20,
-        alignItems: 'center',
-    },
-    registerDivider: {
-        width: 60,
-        height: 4,
-        backgroundColor: colors.border,
-        borderRadius: 2,
-        marginBottom: 16,
-    },
-    registerPromptText: {
-        color: colors.textLight,
-        fontSize: 15,
-        fontWeight: '500',
-        marginBottom: 16,
-    },
-    registerButton: {
+    divider: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        borderRadius: 16,
-        backgroundColor: colors.success,
-        gap: 10,
-        width: '100%',
-        ...Platform.select({
-            ios: {
-                shadowColor: colors.success,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 10,
-            },
-            android: { elevation: 6 },
-        }),
+        marginVertical: theme.spacing.sm
     },
-    registerButtonText: {
-        color: colors.white,
-        fontSize: 17,
-        fontWeight: '700',
+    line: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.1)'
     },
+    orText: {
+        color: '#71717A',
+        fontSize: 12,
+        marginHorizontal: theme.spacing.md,
+        fontFamily: fonts.medium
+    }
 });
 
 export default Auth;

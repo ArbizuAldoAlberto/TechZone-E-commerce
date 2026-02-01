@@ -1,77 +1,135 @@
 /**
- * @fileoverview Generic Button Component
- * @description A customizable button component supporting multiple styles and loading state.
- * Types:
- * - primary: Solid background (default)
- * - secondary: Secondary background color
- * - outline: Border only, transparent background
+ * @fileoverview Universal Button Component (TechZone Elite)
+ * @module components/common/Button
+ * @description Premium interaction element with micro-interactions and rigorous theming.
  */
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+
+import React, { useRef } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View, Animated } from 'react-native';
 import { colors } from '../../global/colors';
 import { fonts } from '../../global/fonts';
+import { theme } from '../../global/theme';
 
-const Button = ({ title, onPress, style, textStyle, loading, disabled, type = 'primary' }) => {
-    const getButtonStyle = () => {
-        if (type === 'outline') return styles.outlineButton;
-        if (type === 'secondary') return styles.secondaryButton;
-        return styles.primaryButton;
+const Button = ({
+    title,
+    onPress,
+    style,
+    textStyle,
+    loading = false,
+    disabled = false,
+    type = 'primary', // 'primary' | 'secondary' | 'outline'
+    icon
+}) => {
+    // Micro-interaction: Scale on press
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const handlePressIn = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 0.96,
+            useNativeDriver: true,
+            speed: 20,
+            bounciness: 4,
+        }).start();
     };
 
-    const getTextStyle = () => {
-        if (type === 'outline') return styles.outlineText;
-        return styles.primaryText;
+    const handlePressOut = () => {
+        Animated.spring(scaleAnim, {
+            toValue: 1, // Spring back
+            useNativeDriver: true,
+            speed: 20,
+            bounciness: 4,
+        }).start();
     };
+
+    const baseStyle = styles[type] || styles.primary;
+    const textBaseStyle = styles[`${type}Text`] || styles.primaryText;
+    const spinnerColor = type === 'outline' ? colors.primary : colors.white;
 
     return (
-        <TouchableOpacity
-            style={[styles.button, getButtonStyle(), style, (disabled || loading) && styles.disabled]}
-            onPress={onPress}
-            disabled={disabled || loading}
-            activeOpacity={0.7}
-        >
-            {loading ? (
-                <ActivityIndicator color={type === 'outline' ? colors.primary : colors.white} />
-            ) : (
-                <Text style={[styles.text, getTextStyle(), textStyle]}>{title}</Text>
-            )}
-        </TouchableOpacity>
+        <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+            <TouchableOpacity
+                style={[
+                    styles.container,
+                    baseStyle,
+                    (disabled || loading) && styles.disabled
+                ]}
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                disabled={disabled || loading}
+                activeOpacity={1} // Handled by scale animation
+                accessibilityRole="button"
+                accessibilityLabel={loading ? "Loading" : title}
+                accessibilityState={{ disabled, busy: loading }}
+            >
+                {loading ? (
+                    <ActivityIndicator color={spinnerColor} />
+                ) : (
+                    <View style={styles.content}>
+                        {icon && <View style={styles.iconWrapper}>{icon}</View>}
+                        <Text style={[styles.label, textBaseStyle, textStyle]}>{title}</Text>
+                    </View>
+                )}
+            </TouchableOpacity>
+        </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
-    button: {
-        height: 50,
-        borderRadius: 12,
+    container: {
+        height: 52, // Standard tap area, slightly refined
+        borderRadius: theme.borderRadius.sm, // 8px (Elite Token)
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 16,
         flexDirection: 'row',
+        paddingHorizontal: theme.spacing.lg,
+        // Default Shadow
+        ...theme.shadows.sm,
     },
-    primaryButton: {
-        backgroundColor: colors.primary,
+    content: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: theme.spacing.sm,
     },
-    secondaryButton: {
-        backgroundColor: colors.secondary,
+    iconWrapper: {
+        marginRight: 4,
     },
-    outlineButton: {
+    // Variants
+    primary: {
+        backgroundColor: colors.primary, // Gold
+        ...theme.shadows.md, // Elevation pop
+    },
+    secondary: {
+        backgroundColor: colors.secondary, // Stone 700 / 300
+    },
+    outline: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: colors.primary,
+        borderColor: colors.primary, // Gold Border
+        elevation: 0,
+        shadowOpacity: 0,
     },
-    text: {
+    // States
+    disabled: {
+        opacity: 0.6,
+        transform: [{ scale: 1 }], // Prevent scale on disabled? (Handled by pointerEvents mostly)
+    },
+    // Text Styling
+    label: {
         fontSize: 16,
-        fontWeight: '700',
-        fontFamily: fonts.bold,
+        fontFamily: fonts.semiBold, // Inter SemiBold
+        letterSpacing: 0.5,
     },
     primaryText: {
         color: colors.white,
     },
+    secondaryText: {
+        color: colors.white,
+    },
     outlineText: {
         color: colors.primary,
-    },
-    disabled: {
-        opacity: 0.5,
+        fontFamily: fonts.bold,
     },
 });
 

@@ -1,21 +1,25 @@
 /**
- * @fileoverview Custom Alert Component
- * @description Cross-platform alert modal that works reliably on Web, iOS, and Android.
- * Features:
- * - Custom styling (Non-native look)
- * - Dark mode support
- * - Multiple buttons
- * - Custom icons
+ * @fileoverview Custom Alert Modal
+ * @module components/common/CustomAlert
+ * @description A cross-platform, theme-aware alert system replacing native alerts.
+ * Supports rich text, custom icons, and multiple action buttons.
  */
+
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
-import { colors, getColors } from '../../global/colors';
-import { Ionicons } from '@expo/vector-icons';
 import { useSelector } from 'react-redux';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, getColors } from '../../global/colors';
 
 /**
- * CustomAlert - Cross-platform alert component that works on web and mobile
- * Uses Modal for web compatibility instead of native Alert
+ * @component
+ * @description State-driven alert component.
+ * @param {boolean} visible - Visibility state.
+ * @param {string} title - Header text.
+ * @param {string} message - Body text.
+ * @param {Array} buttons - Action buttons [{ text, onPress, style: 'default'|'cancel'|'destructive' }].
+ * @param {function} onClose - Dismiss handler.
+ * @param {string} [icon] - Optional Ionicons name to display prominently.
  */
 const CustomAlert = ({
     visible,
@@ -28,59 +32,48 @@ const CustomAlert = ({
     const isDarkMode = useSelector(state => state.theme?.isDarkMode || false);
     const themeColors = getColors(isDarkMode);
 
-    const handleButtonPress = (button) => {
-        if (button.onPress) {
-            button.onPress();
-        }
-        if (onClose) {
-            onClose();
-        }
+    const handleAction = (button) => {
+        if (button.onPress) button.onPress();
+        if (onClose) onClose();
     };
 
+    if (!visible) return null;
+
     return (
-        <Modal
-            visible={visible}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={onClose}
-        >
+        <Modal transparent animationType="fade" visible={visible} onRequestClose={onClose}>
             <View style={styles.overlay}>
-                <View style={[styles.alertContainer, isDarkMode && styles.alertContainerDark]}>
-                    {/* Icon */}
+                <View style={[styles.container, isDarkMode && styles.containerDark]}>
                     {icon && (
-                        <View style={[styles.iconContainer, { backgroundColor: `${themeColors.primary}15` }]}>
+                        <View style={[styles.iconBadge, { backgroundColor: `${themeColors.primary}15` }]}>
                             <Ionicons name={icon} size={32} color={themeColors.primary} />
                         </View>
                     )}
 
-                    {/* Title */}
                     <Text style={[styles.title, { color: themeColors.text }]}>{title}</Text>
 
-                    {/* Message */}
-                    <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator={false}>
+                    <ScrollView style={styles.messageArea} showsVerticalScrollIndicator={false}>
                         <Text style={[styles.message, { color: themeColors.textLight }]}>{message}</Text>
                     </ScrollView>
 
-                    {/* Buttons */}
-                    <View style={styles.buttonContainer}>
-                        {buttons.map((button, index) => (
+                    <View style={styles.buttonStack}>
+                        {buttons.map((btn, idx) => (
                             <TouchableOpacity
-                                key={index}
+                                key={idx}
                                 style={[
                                     styles.button,
-                                    button.style === 'destructive' && styles.destructiveButton,
-                                    button.style === 'cancel' && [styles.cancelButton, isDarkMode && styles.cancelButtonDark],
-                                    buttons.length === 1 && styles.singleButton,
+                                    btn.style === 'destructive' && styles.btnDestructive,
+                                    btn.style === 'cancel' && [styles.btnCancel, isDarkMode && styles.btnCancelDark],
+                                    buttons.length === 1 && styles.btnSingle
                                 ]}
-                                onPress={() => handleButtonPress(button)}
-                                activeOpacity={0.7}
+                                onPress={() => handleAction(btn)}
+                                activeOpacity={0.8}
                             >
                                 <Text style={[
-                                    styles.buttonText,
-                                    button.style === 'destructive' && styles.destructiveText,
-                                    button.style === 'cancel' && [styles.cancelText, { color: themeColors.text }],
+                                    styles.btnText,
+                                    btn.style === 'destructive' && styles.textDestructive,
+                                    btn.style === 'cancel' && [styles.textCancel, { color: themeColors.text }]
                                 ]}>
-                                    {button.text}
+                                    {btn.text}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -91,129 +84,110 @@ const CustomAlert = ({
     );
 };
 
-/**
- * useCustomAlert - Hook for managing alert state
- */
 export const useCustomAlert = () => {
     const [alertConfig, setAlertConfig] = React.useState({
         visible: false,
         title: '',
         message: '',
-        buttons: [{ text: 'OK' }],
-        icon: null,
+        buttons: [],
+        icon: null
     });
 
     const showAlert = (title, message, buttons = [{ text: 'OK' }], icon = null) => {
-        setAlertConfig({
-            visible: true,
-            title,
-            message,
-            buttons,
-            icon,
-        });
+        setAlertConfig({ visible: true, title, message, buttons, icon });
     };
 
     const hideAlert = () => {
         setAlertConfig(prev => ({ ...prev, visible: false }));
     };
 
-    return {
-        alertConfig,
-        showAlert,
-        hideAlert,
-    };
+    return { alertConfig, showAlert, hideAlert };
 };
 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 20,
+        padding: 24
     },
-    alertContainer: {
-        backgroundColor: colors.white,
-        borderRadius: 20,
-        padding: 24,
+    container: {
         width: '100%',
-        maxWidth: 340,
+        maxWidth: 320,
+        backgroundColor: colors.white,
+        borderRadius: 24,
+        padding: 24,
         alignItems: 'center',
         ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.25,
-                shadowRadius: 20,
-            },
-            android: {
-                elevation: 10,
-            },
-            web: {
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25)',
-            },
-        }),
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 24 },
+            android: { elevation: 12 },
+            web: { boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }
+        })
     },
-    alertContainerDark: {
+    containerDark: {
         backgroundColor: '#1C1C1E',
+        borderWidth: 1,
+        borderColor: '#2C2C2E'
     },
-    iconContainer: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
+    iconBadge: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 16
     },
     title: {
         fontSize: 20,
         fontWeight: '700',
         textAlign: 'center',
-        marginBottom: 12,
+        marginBottom: 8
     },
-    messageScroll: {
-        maxHeight: 200,
-        marginBottom: 20,
+    messageArea: {
+        maxHeight: 120,
+        marginBottom: 24,
+        width: '100%'
     },
     message: {
         fontSize: 15,
         textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 22
     },
-    buttonContainer: {
+    buttonStack: {
         width: '100%',
-        gap: 10,
+        gap: 12
     },
     button: {
         backgroundColor: colors.primary,
         paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 12,
+        borderRadius: 14,
         alignItems: 'center',
+        justifyContent: 'center'
     },
-    singleButton: {
-        minWidth: 120,
+    btnDestructive: {
+        backgroundColor: colors.error
     },
-    destructiveButton: {
-        backgroundColor: colors.error,
+    btnCancel: {
+        backgroundColor: '#F2F2F7'
     },
-    cancelButton: {
-        backgroundColor: '#F2F2F7',
+    btnCancelDark: {
+        backgroundColor: '#2C2C2E'
     },
-    cancelButtonDark: {
-        backgroundColor: '#2C2C2E',
+    btnSingle: {
+        minWidth: 140
     },
-    buttonText: {
-        color: colors.white,
+    btnText: {
+        color: '#FFF',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '600'
     },
-    destructiveText: {
-        color: colors.white,
+    textDestructive: {
+        color: '#FFF'
     },
-    cancelText: {
-        color: colors.text,
-    },
+    textCancel: {
+        color: '#000'
+    }
 });
 
 export default CustomAlert;

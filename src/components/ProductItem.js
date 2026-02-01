@@ -1,152 +1,161 @@
 /**
- * @fileoverview Product Item Component
- * @description Renders a single product in a grid or list view.
- * Features:
- * - Displays product image, title, category, and price
- * - Quick "Add to Cart" button
- * - Favorite/Wishlist toggle
- * - Adapts to Dark Mode
+ * @fileoverview Individual Product Card Component
+ * @module components/ProductItem
  */
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { colors, getColors } from '../global/colors';
-import { fonts } from '../global/fonts';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { GlassCard } from './ui/GlassCard';
 import { toggleFavorite } from '../store/favoritesSlice';
-import { addItem } from '../store/cartSlice';
+import { COLORS, FONTS, SPACING } from '../theme';
 
-const ProductItem = ({ product, onPress, containerStyle, isDarkMode: propIsDarkMode }) => {
+/**
+ * @component ProductItem
+ * @description Renders a single product card with glassmorphism effects and favorite toggle.
+ * @param {Object} props
+ * @param {Object} props.product - Product data object.
+ * @param {Function} props.onPress - Navigation callback.
+ * @param {Object} [props.containerStyle] - Style overrides.
+ * @param {boolean} props.isDarkMode - Theme mode flag.
+ */
+const ProductItem = ({ product, onPress, containerStyle, isDarkMode }) => {
     const dispatch = useDispatch();
     const favorites = useSelector(state => state.favorites.items);
-    const reduxIsDarkMode = useSelector(state => state.theme.isDarkMode);
+    const isFavorite = favorites.some(item => item.id === product.id);
 
-    // Use prop if provided, otherwise use Redux state
-    const isDarkMode = propIsDarkMode !== undefined ? propIsDarkMode : reduxIsDarkMode;
-    const themeColors = getColors(isDarkMode);
-
-    const isFavorite = favorites.some(fav => fav.id === product.id);
-
-    const handleToggleFavorite = () => {
+    const handleFavoritePress = (e) => {
+        e.stopPropagation();
         dispatch(toggleFavorite(product));
     };
 
-    const handleAddToCart = () => {
-        dispatch(addItem({ ...product, quantity: 1 }));
-    };
-
     return (
-        <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={containerStyle}>
-            <View style={[styles.container, isDarkMode && styles.containerDark]}>
-                <View style={[styles.imageContainer, isDarkMode && styles.imageContainerDark]}>
-                    <Image source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
-                    <TouchableOpacity style={[styles.favoriteButton, isDarkMode && styles.favoriteButtonDark]} onPress={handleToggleFavorite}>
-                        <Ionicons
-                            name={isFavorite ? "heart" : "heart-outline"}
-                            size={20}
-                            color={isFavorite ? colors.error : themeColors.textLight}
+        <Animated.View
+            entering={FadeInUp.delay(100 + product.id * 50).springify()}
+            style={containerStyle}
+        >
+            <Pressable onPress={onPress}>
+                <GlassCard
+                    style={[styles.card, { borderColor: isDarkMode ? COLORS.glassBorder : 'rgba(0,0,0,0.1)' }]}
+                    intensity={20}
+                    isDarkMode={isDarkMode}
+                    strokeColor={isDarkMode ? COLORS.glassBorder : 'rgba(0,0,0,0.1)'}
+                >
+                    {/* Image Container */}
+                    <View style={[styles.imageContainer, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }]}>
+                        <Image
+                            source={{ uri: product.image }}
+                            style={styles.image}
+                            resizeMode="contain"
                         />
-                    </TouchableOpacity>
-                </View>
-                <View style={styles.details}>
-                    <Text style={[styles.title, { color: themeColors.text }]} numberOfLines={1}>{product.title}</Text>
-                    <Text style={[styles.category, { color: themeColors.textLight }]}>{product.category}</Text>
-                    <View style={styles.priceRow}>
-                        <Text style={styles.price}>${product.price.toLocaleString()}</Text>
-                        <TouchableOpacity style={[styles.addButton, isDarkMode && styles.addButtonDark]} onPress={handleAddToCart}>
-                            <Ionicons name="add" size={20} color={themeColors.text} />
+                        {/* Favorite/Heart Button */}
+                        <TouchableOpacity
+                            style={[
+                                styles.favBtn,
+                                {
+                                    backgroundColor: isFavorite ? COLORS.cta : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)')
+                                }
+                            ]}
+                            onPress={handleFavoritePress}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons
+                                name={isFavorite ? "heart" : "heart-outline"}
+                                size={16}
+                                color={isFavorite ? COLORS.white : (isDarkMode ? COLORS.white : COLORS.secondary)}
+                            />
                         </TouchableOpacity>
                     </View>
-                </View>
-            </View>
-        </TouchableOpacity>
+
+                    {/* Content */}
+                    <View style={styles.content}>
+                        <Text style={[styles.category, { color: isDarkMode ? COLORS.textLight : COLORS.secondary }]} numberOfLines={1}>{product.category}</Text>
+                        <Text style={[styles.title, { color: isDarkMode ? COLORS.white : COLORS.text }]} numberOfLines={2}>{product.title}</Text>
+
+                        <View style={styles.footer}>
+                            <Text style={styles.price}>${product.price.toLocaleString()}</Text>
+                            <View style={[styles.rating, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                <Ionicons name="star" size={12} color={COLORS.cta} />
+                                <Text style={[styles.ratingText, { color: isDarkMode ? COLORS.white : COLORS.text }]}>{product.rating?.rate || product.rating || 4.5}</Text>
+                            </View>
+                        </View>
+                    </View>
+                </GlassCard>
+            </Pressable>
+        </Animated.View>
     );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        backgroundColor: colors.white,
+    card: {
+        padding: SPACING.sm,
         borderRadius: 20,
-        padding: 12,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 3,
-            },
-            web: {
-                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-            }
-        })
-    },
-    containerDark: {
-        backgroundColor: '#1C1C1E',
+        overflow: 'hidden',
+        minHeight: 220,
+        borderWidth: 1
     },
     imageContainer: {
+        height: 140,
         width: '100%',
-        height: 120,
-        backgroundColor: '#F8F9FA',
-        borderRadius: 15,
-        marginBottom: 12,
-        alignItems: 'center',
+        marginBottom: SPACING.sm,
         justifyContent: 'center',
-        position: 'relative',
-    },
-    imageContainerDark: {
-        backgroundColor: '#2C2C2E',
+        alignItems: 'center',
+        borderRadius: 16
     },
     image: {
-        width: '80%',
-        height: '80%',
+        width: '90%',
+        height: '90%'
     },
-    favoriteButton: {
+    favBtn: {
         position: 'absolute',
         top: 8,
         right: 8,
-        backgroundColor: colors.white,
-        padding: 4,
-        borderRadius: 50,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)'
     },
-    favoriteButtonDark: {
-        backgroundColor: '#3A3A3C',
-    },
-    details: {
-        paddingHorizontal: 4,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: '700',
-        marginBottom: 4,
-        fontFamily: fonts.bold,
+    content: {
+        gap: 4
     },
     category: {
-        fontSize: 12,
-        marginBottom: 8,
-        fontFamily: fonts.regular,
+        fontSize: 10,
+        fontFamily: FONTS.medium,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5
     },
-    priceRow: {
+    title: {
+        fontSize: 14,
+        fontFamily: FONTS.bold,
+        height: 38 // enforce 2 lines height roughly
+    },
+    footer: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: SPACING.xs
     },
     price: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: colors.primary,
-        fontFamily: fonts.bold,
+        fontSize: 16,
+        color: COLORS.cta,
+        fontFamily: FONTS.bold
     },
-    addButton: {
-        backgroundColor: colors.background,
-        padding: 6,
-        borderRadius: 50,
+    rating: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8
     },
-    addButtonDark: {
-        backgroundColor: '#2C2C2E',
-    },
+    ratingText: {
+        fontSize: 10,
+        fontFamily: FONTS.bold
+    }
 });
 
 export default ProductItem;

@@ -8,7 +8,15 @@ import { BASE_URL } from '../global/constants';
 
 export const userApi = createApi({
     reducerPath: 'userApi',
-    baseQuery: fetchBaseQuery({ baseUrl: BASE_URL }),
+    // Note: Firebase RTDB uses ?auth=TOKEN for authenticated requests
+    // For mutations, we'll add auth in the queryFn where needed
+    baseQuery: fetchBaseQuery({
+        baseUrl: BASE_URL,
+        prepareHeaders: (headers) => {
+            headers.set('Content-Type', 'application/json');
+            return headers;
+        }
+    }),
     tagTypes: ['Profile', 'Favorites'],
     endpoints: (builder) => ({
         /** Fetches complete user profile from Firebase */
@@ -17,23 +25,48 @@ export const userApi = createApi({
             providesTags: ['Profile'],
         }),
 
-        /** Updates profile image URI in Firebase */
+        /** Updates profile image with Offline Fallback */
         updateProfileImage: builder.mutation({
-            query: ({ localId, image }) => ({
-                url: `users/${localId}/profileImage.json`,
-                method: 'PUT',
-                body: JSON.stringify(image),
-            }),
+            queryFn: async ({ localId, image }) => {
+                const endpoint = `users/${localId}/profileImage.json`;
+                const method = 'PUT';
+                const body = JSON.stringify(image);
+
+                try {
+                    const response = await fetch(`${BASE_URL}${endpoint}`, { method, body });
+                    if (!response.ok) throw new Error('Network Error');
+                    return { data: await response.json() };
+                } catch (e) {
+                    console.warn("Sentinel: Queuing Profile Image Update");
+                    const { enqueueMutation } = require('../db');
+                    await enqueueMutation(endpoint, method, image); // Store raw value, SyncManager stringifies payload
+                    return { data: image };
+                }
+            },
             invalidatesTags: ['Profile'],
         }),
 
-        /** Updates user location (coords + address) */
+        /** Updates user location with Offline Fallback */
         updateUserLocation: builder.mutation({
-            query: ({ localId, location }) => ({
-                url: `users/${localId}/location.json`,
-                method: 'PUT',
-                body: location,
-            }),
+            queryFn: async ({ localId, location }) => {
+                const endpoint = `users/${localId}/location.json`;
+                const method = 'PUT';
+
+                try {
+                    const response = await fetch(`${BASE_URL}${endpoint}`, {
+                        method,
+                        body: JSON.stringify(location),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    if (!response.ok) throw new Error('Network Error');
+                    return { data: await response.json() };
+                } catch (e) {
+                    console.warn("Sentinel: Queuing Location Update");
+                    const { enqueueMutation } = require('../db');
+                    await enqueueMutation(endpoint, method, location);
+                    return { data: location };
+                }
+            },
             invalidatesTags: ['Profile'],
         }),
 
@@ -67,13 +100,26 @@ export const userApi = createApi({
             },
         }),
 
-        /** Updates theme preference for cross-device sync */
+        /** Updates theme preference with Offline Fallback */
         updateThemePreference: builder.mutation({
-            query: ({ localId, themePreference }) => ({
-                url: `users/${localId}/themePreference.json`,
-                method: 'PUT',
-                body: JSON.stringify(themePreference),
-            }),
+            queryFn: async ({ localId, themePreference }) => {
+                const endpoint = `users/${localId}/themePreference.json`;
+                const method = 'PUT';
+                // Firebase needs stringified primitive manually sometimes, but for PUT on a node it's usually automatic if standard JSON.
+                // However, our original code did JSON.stringify(themePreference).
+                const body = JSON.stringify(themePreference);
+
+                try {
+                    const response = await fetch(`${BASE_URL}${endpoint}`, { method, body });
+                    if (!response.ok) throw new Error('Network Error');
+                    return { data: await response.json() };
+                } catch (e) {
+                    console.warn("Sentinel: Queuing Theme Update");
+                    const { enqueueMutation } = require('../db');
+                    await enqueueMutation(endpoint, method, themePreference);
+                    return { data: themePreference };
+                }
+            },
             invalidatesTags: ['Profile'],
         }),
 
