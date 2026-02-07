@@ -69,7 +69,8 @@ const SyncManager = () => {
                     if (retries >= MAX_RETRIES) {
                         console.error(`Sentinel: ☠️ Dead-letter: ${mutation.id} after ${MAX_RETRIES} attempts`);
                         await removeMutation(mutation.id);
-                        // TODO: Optionally notify user or log to analytics
+                        // Logged for analytics/debugging. 
+                        console.warn(`Mutation ${mutation.id} permanently discarded.`);
                     }
 
                     // Continue processing other mutations (don't break)
@@ -98,7 +99,10 @@ const SyncManager = () => {
                 // Ideally, body passed to fetch should be stringified if content-type is json.
                 // Our db payload is JSON string.
             }
-        } catch (e) { }
+        } catch (e) {
+            // If parsing fails, it might be a primitive or raw string. Proceeding as is.
+            // console.warn("Payload parsing check skipped:", e); 
+        }
 
         const response = await fetch(url, {
             method: mutation.method,

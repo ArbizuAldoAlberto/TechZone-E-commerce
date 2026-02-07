@@ -3,7 +3,6 @@ import {
     View,
     Text,
     StyleSheet,
-    Image,
     TouchableOpacity,
     StatusBar,
     useWindowDimensions,
@@ -23,7 +22,6 @@ import { useCustomAlert } from '../../components/common/CustomAlert';
 import ProductItem from '../../components/ProductItem';
 import { HomeSkeleton } from '../../components/common/SkeletonLoader';
 import CustomAlert from '../../components/common/CustomAlert';
-import Hero3D from '../../components/3d/Hero3D';
 import ParticlesBackground from '../../components/3d/ParticlesBackground';
 import InputField from '../../components/common/InputField';
 import ProductRow from '../../components/home/ProductRow';
@@ -31,6 +29,11 @@ import PromoBanner from '../../components/home/PromoBanner';
 import { GlassCard } from '../../components/ui/GlassCard';
 import { GradientText } from '../../components/ui/GradientText';
 import { NeoButton } from '../../components/ui/NeoButton';
+
+// Extracted Components
+import { HomeHeader } from '../../components/home/HomeHeader';
+import { CategorySelector } from '../../components/home/CategorySelector';
+import { HeroSection } from '../../components/home/HeroSection';
 
 /**
  * @component Home
@@ -105,7 +108,7 @@ const Home = ({ navigation }) => {
 
     const renderHeader = () => (
         <View style={{ gap: SPACING.lg }}>
-            <HeaderBar
+            <HomeHeader
                 title="TechZone"
                 onProfilePress={() => navigation.navigate('Profile')}
                 profileImage={userProfileImage}
@@ -244,149 +247,12 @@ const Home = ({ navigation }) => {
     );
 };
 
-// --- Sub-Components ---
-
-const HeaderBar = ({ title, onProfilePress, profileImage, isDarkMode }) => (
-    <GlassCard
-        style={[styles.headerContainer, { borderColor: isDarkMode ? COLORS.glassBorder : 'rgba(0,0,0,0.1)' }]}
-        intensity={30}
-        isDarkMode={isDarkMode}
-    >
-        <View style={styles.headerContent}>
-            <View style={styles.logoRow}>
-                <View style={styles.logoBadge}>
-                    <Ionicons name="diamond-outline" size={22} color={COLORS.cta} />
-                </View>
-                <GradientText style={[styles.appTitle, { color: isDarkMode ? COLORS.white : COLORS.primary }]}>
-                    {title}
-                </GradientText>
-            </View>
-
-            <TouchableOpacity onPress={onProfilePress} activeOpacity={0.8}>
-                <Image source={{ uri: profileImage }} style={styles.avatar} />
-            </TouchableOpacity>
-        </View>
-    </GlassCard>
-);
-
-const CategorySelector = ({ categories, selectedCategory, onSelect, isDarkMode }) => (
-    <View>
-        <FlatList
-            horizontal
-            data={categories ? [{ id: null, title: 'All' }, ...categories] : []}
-            keyExtractor={item => item.id?.toString() || 'all'}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.catScrollContent}
-            renderItem={({ item }) => (
-                <CategoryPill
-                    title={item.title}
-                    active={selectedCategory === item.title || (!selectedCategory && item.title === 'All')}
-                    onPress={() => onSelect(item.title === 'All' ? null : item.title)}
-                    isDarkMode={isDarkMode}
-                />
-            )}
-        />
-    </View>
-);
-
-const CategoryPill = ({ title, active, onPress, isDarkMode }) => (
-    <TouchableOpacity
-        onPress={onPress}
-        style={[
-            styles.pill,
-            active ? styles.pillActive : (isDarkMode ? styles.pillInactive : styles.pillInactiveLight)
-        ]}
-    >
-        <Text style={[
-            styles.pillText,
-            active ? styles.pillTextActive : (isDarkMode ? styles.pillTextInactive : styles.pillTextInactiveLight)
-        ]}>{title}</Text>
-    </TouchableOpacity>
-);
-
-const HeroSection = ({ isDarkMode }) => (
-    <View style={{ marginHorizontal: SPACING.lg }}>
-        <GlassCard
-            intensity={isDarkMode ? 80 : 60}
-            isDarkMode={isDarkMode}
-            style={[styles.heroCard, {
-                backgroundColor: isDarkMode ? 'rgba(28,25,23,0.85)' : 'rgba(255,255,255,0.95)',
-                borderColor: isDarkMode ? COLORS.glassBorder : 'rgba(0,0,0,0.1)',
-            }]}
-        >
-            <View style={styles.heroInner}>
-                <View style={styles.heroContent}>
-                    <Text style={[styles.heroLabel, { color: COLORS.cta }]}>🔥 DROPPING NOW</Text>
-                    <GradientText style={styles.heroTitle}>FUTURE TECH</GradientText>
-                    <Text style={[styles.heroDesc, { color: isDarkMode ? '#CBD5E1' : COLORS.secondary }]}>
-                        Experience the next generation of elite technology.
-                    </Text>
-                    <View style={{ marginTop: SPACING.lg }}>
-                        <NeoButton
-                            title="Shop Now"
-                            style={{ paddingHorizontal: 28, paddingVertical: 14 }}
-                            icon="arrow-forward"
-                        />
-                    </View>
-                </View>
-                <View style={styles.heroModel}>
-                    <React.Suspense fallback={<View style={{ width: 180, height: 180 }} />}>
-                        <Hero3D />
-                    </React.Suspense>
-                </View>
-            </View>
-        </GlassCard>
-    </View>
-);
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: COLORS.background },
     bgLayer: { ...StyleSheet.absoluteFillObject, zIndex: -1, backgroundColor: COLORS.primary },
     safeArea: { flex: 1 },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
 
-    headerContainer: {
-        marginHorizontal: SPACING.lg,
-        padding: 0,
-        borderRadius: 24,
-        minHeight: 80,
-        justifyContent: 'center',
-    },
-    headerContent: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: SPACING.xl,
-        paddingVertical: SPACING.md,
-    },
-    logoRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 16 // Increased gap
-    },
-    logoBadge: {
-        width: 40,
-        height: 40,
-        borderRadius: 14,
-        backgroundColor: 'rgba(202, 138, 4, 0.15)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1.5,
-        borderColor: COLORS.cta
-    },
-    appTitle: {
-        fontSize: 26,
-        letterSpacing: 0.5,
-        fontFamily: FONTS.heading,
-        fontWeight: '700'
-    },
-    avatar: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
-        borderWidth: 2.5,
-        borderColor: COLORS.cta
-    },
     searchSection: { paddingHorizontal: SPACING.lg },
     searchRow: {
         flexDirection: 'row',
@@ -443,79 +309,7 @@ const styles = StyleSheet.create({
     priceBtnTextActive: {
         color: COLORS.white
     },
-    catScrollContent: { gap: 10, paddingHorizontal: SPACING.lg, paddingBottom: 10 },
-    pill: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 30, // Fully rounded
-        borderWidth: 1,
-    },
-    pillActive: {
-        backgroundColor: COLORS.cta,
-        borderColor: COLORS.cta,
-    },
-    pillInactive: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderColor: COLORS.secondary,
-    },
-    pillInactiveLight: {
-        backgroundColor: 'rgba(0,0,0,0.05)',
-        borderColor: '#E2E8F0',
-    },
-    pillText: {
-        fontFamily: FONTS.body,
-        fontSize: 14,
-        fontWeight: '600'
-    },
-    pillTextActive: { color: COLORS.white },
-    pillTextInactive: { color: COLORS.textLight },
-    pillTextInactiveLight: { color: COLORS.secondary },
 
-    heroCard: {
-        minHeight: 260,
-        height: 'auto',
-        justifyContent: 'center', // Centra el contenido verticalmente
-        padding: 0, // Reset padding
-    },
-    heroInner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: SPACING.md,
-    },
-    heroContent: {
-        flex: 1,
-        zIndex: 10,
-        paddingLeft: SPACING.sm,
-        paddingVertical: SPACING.sm,
-    },
-    heroLabel: {
-        color: COLORS.cta,
-        fontSize: 12,
-        fontFamily: FONTS.body,
-        fontWeight: '800',
-        letterSpacing: 2,
-        marginBottom: 8,
-        textTransform: 'uppercase'
-    },
-    heroTitle: {
-        fontSize: 28,
-        lineHeight: 34,
-        marginBottom: 10,
-    },
-    heroDesc: {
-        fontSize: 14,
-        fontFamily: FONTS.body,
-        lineHeight: 20,
-        maxWidth: 180,
-        opacity: 0.9
-    },
-    heroModel: {
-        flex: 1,
-        height: 200,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 0
-    },
     sectionHeader: {
         fontSize: 22,
         marginBottom: SPACING.md,

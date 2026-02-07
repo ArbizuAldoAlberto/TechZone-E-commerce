@@ -11,21 +11,17 @@ import {
     View,
     Text,
     StyleSheet,
-    FlatList,
-    TouchableOpacity,
-    ActivityIndicator,
-    Image,
     ScrollView,
-    Platform
+    TouchableOpacity,
+    ActivityIndicator
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInRight, Layout } from 'react-native-reanimated';
 
 // Logic & Storage
 import { addItem, decreaseItem, removeItem, confirmCart, loadPendingItems } from '../../store/cartSlice';
-import { toggleFavorite } from '../../store/favoritesSlice';
 import { usePostOrderMutation } from '../../services/shopService';
 import { fetchPendingCartItems, clearPendingCartItems } from '../../db';
 import { colors, getColors } from '../../global/colors';
@@ -36,7 +32,9 @@ import CustomAlert, { useCustomAlert } from '../../components/common/CustomAlert
 // Components
 import CartItem from '../../components/CartItem';
 import ParticlesBackground from '../../components/3d/ParticlesBackground';
-import Button from '../../components/common/Button';
+import { WishlistSection } from '../../components/cart/WishlistSection';
+import { CheckoutFooter } from '../../components/cart/CheckoutFooter';
+import { EmptyCartView } from '../../components/cart/EmptyCartView';
 
 /**
  * @component Cart
@@ -116,13 +114,23 @@ const Cart = ({ navigation }) => {
 
         try {
             await triggerPostOrder(payload).unwrap();
-            await clearPendingCartItems();
+
+            // Try to clear local DB, but don't block success if it fails
+            try {
+                await clearPendingCartItems();
+            } catch (dbError) {
+                console.warn('Failed to clear local cart after successful order:', dbError);
+                // Optionally alert the user or just log it, as the primary order succeeded
+            }
+
             dispatch(confirmCart());
             showAlert('Confirmed', 'Order placed successfully.', [
                 { text: 'Orders', onPress: () => navigation.navigate('Orders') }
             ]);
         } catch (error) {
-            showAlert('Error', 'Transaction failed.', [{ text: 'OK' }]);
+            console.error('Checkout failed:', error);
+            const errorMessage = error?.data?.message || error?.message || 'Transaction failed. Please try again.';
+            showAlert('Error', errorMessage, [{ text: 'OK' }]);
         }
     };
 
@@ -216,107 +224,6 @@ const LoadingView = ({ themeColors }) => (
     </View>
 );
 
-/**
- * @component EmptyCartView
- * @description Displayed when cart and wishlist are empty.
- */
-const EmptyCartView = ({ navigation, themeColors, isDarkMode }) => (
-    <SafeAreaView style={[styles.center, { backgroundColor: themeColors.background }]} edges={['top']}>
-        <ParticlesBackground />
-        <View style={styles.emptyCircle}>
-            <Ionicons name="cart-outline" size={48} color={isDarkMode ? '#555' : '#CCC'} />
-        </View>
-        <Text style={[styles.emptyTitle, { color: themeColors.text }]}>Your Cart is Empty</Text>
-        <Text style={[styles.emptySub, { color: themeColors.textLight }]}>Looks like you haven't added anything yet.</Text>
-        <Button
-            title="Start Shopping"
-            onPress={() => navigation.navigate('Shop')}
-            type="primary"
-            style={{ marginTop: 32, width: 200 }}
-        />
-    </SafeAreaView>
-);
-
-/**
- * @component WishlistSection
- * @description Horizontal list of saved items.
- */
-const WishlistSection = ({ favorites, dispatch, navigation, themeColors, isDarkMode }) => (
-    <View style={styles.wishSection}>
-        <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Saved for Later ({favorites.length})</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
-            {favorites.map((fav) => (
-                <View key={fav.id} style={[styles.favCard, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : '#F5F5F5' }]}>
-                    <TouchableOpacity
-                        style={styles.removeFav}
-                        onPress={() => dispatch(toggleFavorite(fav))}
-                    >
-                        <Ionicons name="close" size={12} color="#FFF" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.favContent}
-                        onPress={() => navigation.navigate('ProductDetail', { product: fav })}
-                    >
-                        <Image source={{ uri: fav.thumbnail || fav.images?.[0] }} style={styles.favImg} resizeMode="contain" />
-                        <Text numberOfLines={1} style={[styles.favTitle, { color: themeColors.text }]}>{fav.title}</Text>
-                        <Text style={styles.favPrice}>${fav.price}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.favAdd}
-                        onPress={() => dispatch(addItem(fav))}
-                    >
-                        <Ionicons name="add" size={16} color="#FFF" />
-                    </TouchableOpacity>
-                </View>
-            ))}
-        </ScrollView>
-    </View>
-);
-
-/**
- * @component CheckoutFooter
- * @description Fixed bottom footer with totals and checkout button.
- */
-const CheckoutFooter = ({ total, shipping, finalTotal, onCheckout, isOffline, isProcessing, themeColors, isDarkMode }) => {
-    const { bottom } = useSafeAreaInsets();
-
-    // Style override to handle web/native shadow differences if needed
-    // Using standard Native shadow props which work on both (with strict React Native or Expo)
-
-    return (
-        <View style={[
-            styles.footer,
-            {
-                backgroundColor: isDarkMode ? '#1C1917' : '#FFF',
-                borderTopColor: themeColors.border,
-                paddingBottom: Math.max(20, bottom + 10)
-            }
-        ]}>
-            <View style={styles.row}>
-                <Text style={{ color: themeColors.textLight, fontFamily: fonts.medium }}>Subtotal</Text>
-                <Text style={{ color: themeColors.text, fontFamily: fonts.bold }}>${total.toFixed(2)}</Text>
-            </View>
-            <View style={styles.row}>
-                <Text style={{ color: themeColors.textLight, fontFamily: fonts.medium }}>Shipping</Text>
-                <Text style={{ color: shipping === 0 ? colors.success : themeColors.text, fontFamily: fonts.bold }}>
-                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
-                </Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: themeColors.border }]} />
-            <View style={[styles.row, { marginBottom: 20 }]}>
-                <Text style={{ color: themeColors.text, fontFamily: fonts.black, fontSize: 18 }}>Total</Text>
-                <Text style={{ color: colors.primary, fontFamily: fonts.black, fontSize: 24 }}>${finalTotal.toFixed(2)}</Text>
-            </View>
-            <Button
-                title={isOffline ? "Save Offline" : "Checkout"}
-                onPress={onCheckout}
-                loading={isProcessing}
-                icon={<Ionicons name="arrow-forward" size={18} color="#FFF" />}
-            />
-        </View>
-    );
-};
-
 const styles = StyleSheet.create({
     container: { flex: 1 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -341,75 +248,6 @@ const styles = StyleSheet.create({
         paddingBottom: 250,
         paddingHorizontal: theme.spacing.lg
     },
-
-    // Empty View Styles
-    emptyCircle: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(150,150,150,0.1)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 20
-    },
-    emptyTitle: { fontSize: 24, fontFamily: fonts.bold, marginBottom: 8 },
-    emptySub: { fontSize: 16, fontFamily: fonts.medium },
-
-    // Wishlist Styles
-    wishSection: { marginBottom: 24 },
-    sectionTitle: { fontSize: 18, fontFamily: fonts.bold, marginBottom: 12 },
-    favCard: {
-        width: 120,
-        padding: 10,
-        borderRadius: 16,
-        alignItems: 'center',
-        position: 'relative'
-    },
-    removeFav: {
-        position: 'absolute',
-        top: 6,
-        right: 6,
-        backgroundColor: colors.error,
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10
-    },
-    favContent: { alignItems: 'center', width: '100%' },
-    favImg: { width: 64, height: 64, marginBottom: 8 },
-    favTitle: { fontSize: 11, fontFamily: fonts.semiBold, textAlign: 'center', marginBottom: 2 },
-    favPrice: { fontSize: 12, fontFamily: fonts.bold, color: colors.primary },
-    favAdd: {
-        marginTop: 8,
-        backgroundColor: colors.primary,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-
-    // Footer Styles
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 24,
-        paddingBottom: 40,
-        borderTopWidth: 1,
-        borderTopLeftRadius: 32,
-        borderTopRightRadius: 32,
-        shadowColor: "#000",
-        shadowOffset: { height: -4, width: 0 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 10
-    },
-    row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    divider: { height: 1, marginVertical: 12 },
 });
 
 export default Cart;

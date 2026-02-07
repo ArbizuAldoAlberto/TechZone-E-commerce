@@ -17,6 +17,8 @@ try {
   console.warn("SplashScreen preventAutoHideAsync error", e);
 }
 
+import GlobalErrorBoundary from './src/components/error/GlobalErrorBoundary';
+
 /**
  * @component App
  * @description Application Entry Point.
@@ -63,12 +65,14 @@ export default function App() {
   }
 
   return (
-    <Provider store={store}>
-      <SafeAreaProvider>
-        <SyncManager>
-          <MainNavigator />
-        </SyncManager>
-      </SafeAreaProvider>
-    </Provider>
+    <GlobalErrorBoundary>
+      <Provider store={store}>
+        <SafeAreaProvider>
+          <SyncManager>
+            <MainNavigator />
+          </SyncManager>
+        </SafeAreaProvider>
+      </Provider>
+    </GlobalErrorBoundary>
   );
 }

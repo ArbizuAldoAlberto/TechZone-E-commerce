@@ -103,7 +103,9 @@ export const insertSession = async ({ localId, email, token, profileImage = null
             'INSERT OR REPLACE INTO sessions (localId, email, token, profileImage, userLocation, themePreference) VALUES (?, ?, ?, ?, ?, ?);',
             [localId, email, token, profileImage, locationJson, themePreference]
         );
-    } catch (e) { console.error("Session Write Error", e); }
+    } catch (e) {
+        console.error("Session Write Error:", e);
+    }
 };
 
 export const fetchSession = async () => {
@@ -115,14 +117,19 @@ export const fetchSession = async () => {
             try { session.userLocation = JSON.parse(session.userLocation); } catch { session.userLocation = null; }
         }
         return session;
-    } catch { return null; }
+    } catch (e) {
+        console.warn("Fetch Session Error:", e);
+        return null;
+    }
 };
 
 export const deleteSession = async () => {
     try {
         const db = await getDb();
         if (db) await db.runAsync('DELETE FROM sessions;');
-    } catch (e) { /* Silent */ }
+    } catch (e) {
+        console.error("Delete Session Failed:", e);
+    }
 };
 
 export const updateSession = async (updates) => {
@@ -144,7 +151,9 @@ export const updateSession = async (updates) => {
         values.push(session.localId);
 
         await db.runAsync(`UPDATE sessions SET ${setClauses.join(', ')} WHERE localId = ?;`, values);
-    } catch (e) { /* Silent */ }
+    } catch (e) {
+        console.error("Session Update Failed:", e);
+    }
 };
 
 // ========== 2. CART DOMAIN (OFFLINE) ==========
@@ -158,7 +167,9 @@ export const insertPendingCartItem = async (item) => {
             `INSERT OR REPLACE INTO pending_cart_items (id, productId, productName, quantity, price, imageUrl, productData, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
             [id, item.id.toString(), item.title || '', item.quantity || 1, item.price, item.thumbnail || '', JSON.stringify(item), new Date().toISOString()]
         );
-    } catch (e) { /* Silent */ }
+    } catch (e) {
+        console.error("Insert Pending Item Failed:", e);
+    }
 };
 
 export const fetchPendingCartItems = async () => {
@@ -167,14 +178,20 @@ export const fetchPendingCartItems = async () => {
         if (!db) return [];
         const results = await db.getAllAsync('SELECT * FROM pending_cart_items ORDER BY createdAt DESC;');
         return results.map(row => ({ ...JSON.parse(row.productData), pendingId: row.id, isPending: true, quantity: row.quantity }));
-    } catch { return []; }
+    } catch (e) {
+        console.error("Fetch Pending Items Failed:", e);
+        return [];
+    }
 };
 
 export const clearPendingCartItems = async () => {
     try {
         const db = await getDb();
         if (db) await db.runAsync('DELETE FROM pending_cart_items;');
-    } catch { /* Silent */ }
+        if (db) await db.runAsync('DELETE FROM pending_cart_items;');
+    } catch (e) {
+        console.error("Clear Pending Items Failed:", e);
+    }
 };
 
 // ========== 3. ORDERS DOMAIN (CACHE) ==========
@@ -231,7 +248,10 @@ export const getCachedOrders = async (userId) => {
             status: row.status,
             isCached: true // UI Flag
         }));
-    } catch { return []; }
+    } catch (e) {
+        console.error("Get Cached Orders Failed:", e);
+        return [];
+    }
 };
 
 // ========== 4. MUTATION QUEUE (OFFLINE WRITE) ==========
@@ -245,7 +265,9 @@ export const enqueueMutation = async (endpoint, method, payload) => {
             `INSERT INTO offline_queue (id, endpoint, method, payload, createdAt) VALUES (?, ?, ?, ?, ?);`,
             [id, endpoint, method, JSON.stringify(payload), new Date().toISOString()]
         );
-    } catch (e) { /* Silent */ }
+    } catch (e) {
+        console.error("Enqueue Mutation Failed:", e);
+    }
 };
 
 export const getMutationQueue = async () => {
@@ -253,14 +275,19 @@ export const getMutationQueue = async () => {
         const db = await getDb();
         if (!db) return [];
         return await db.getAllAsync('SELECT * FROM offline_queue ORDER BY createdAt ASC;');
-    } catch { return []; }
+    } catch (e) {
+        console.error("Get Mutation Queue Failed:", e);
+        return [];
+    }
 };
 
 export const removeMutation = async (id) => {
     try {
         const db = await getDb();
         if (db) await db.runAsync('DELETE FROM offline_queue WHERE id = ?;', [id]);
-    } catch { /* Silent */ }
+    } catch (e) {
+        console.error("Remove Mutation Failed:", e);
+    }
 };
 
 /**
@@ -283,7 +310,8 @@ export const incrementRetry = async (id) => {
         await db.runAsync('UPDATE offline_queue SET retryCount = retryCount + 1 WHERE id = ?;', [id]);
         const result = await db.getFirstAsync('SELECT retryCount FROM offline_queue WHERE id = ?;', [id]);
         return result?.retryCount || 0;
-    } catch {
+    } catch (e) {
+        console.error("Increment Retry Failed:", e);
         return MAX_RETRIES;
     }
 };
@@ -297,5 +325,8 @@ export const getFailedMutations = async () => {
         const db = await getDb();
         if (!db) return [];
         return await db.getAllAsync('SELECT * FROM offline_queue WHERE retryCount >= ?;', [MAX_RETRIES]);
-    } catch { return []; }
+    } catch (e) {
+        console.error("Get Failed Mutations Error:", e);
+        return [];
+    }
 };

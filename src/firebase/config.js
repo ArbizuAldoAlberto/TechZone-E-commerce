@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 
 // Firebase configuration
 // TODO: Replace with actual project values from Firebase Console
+// Firebase configuration
 const firebaseConfig = {
     apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -16,19 +17,37 @@ const firebaseConfig = {
     appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// CRITICAL: Validate Config to prevent startup crash
+const isConfigValid = !!firebaseConfig.apiKey;
 
-// Initialize Auth with persistence based on Platform
+let app;
 let auth;
 
-if (Platform.OS === 'web') {
-    auth = getAuth(app);
-    auth.setPersistence(browserLocalPersistence);
-} else {
-    auth = initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage)
-    });
+try {
+    if (!isConfigValid) {
+        console.error("🔥 FIREBASE CONFIG MISSING: App running in safe mode. Check .env variables.");
+        // Initialize with dummy values to prevent 'undefined' crash, but Services will fail gracefully
+        app = initializeApp({
+            apiKey: "dummy-key",
+            authDomain: "dummy.firebaseapp.com",
+            projectId: "dummy-project"
+        });
+    } else {
+        app = initializeApp(firebaseConfig);
+    }
+
+    if (Platform.OS === 'web') {
+        auth = getAuth(app);
+        auth.setPersistence(browserLocalPersistence);
+    } else {
+        auth = initializeAuth(app, {
+            persistence: getReactNativePersistence(AsyncStorage)
+        });
+    }
+
+} catch (error) {
+    console.error("🔥 FIREBASE INIT FAILED:", error);
+    // Silent fail to allow app UI to render Error Boundary
 }
 const db = getFirestore(app);
 

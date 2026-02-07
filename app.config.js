@@ -3,7 +3,7 @@ import 'dotenv/config';
 export default {
     expo: {
         name: "TechZone",
-        slug: "techzone",
+        slug: "techzone-feature",
         version: "1.0.0",
         orientation: "portrait",
         icon: "./assets/icon.png",
@@ -72,7 +72,7 @@ export default {
         ],
         extra: {
             eas: {
-                "projectId": "09cf0146-4fcb-409e-b0b0-13ad73bb779e"
+                "projectId": "82798495-c977-44ec-8208-0443e7422e3f"
             }
         }
     }
