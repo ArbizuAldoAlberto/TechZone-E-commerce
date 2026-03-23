@@ -9,14 +9,27 @@ import { BASE_URL } from '../global/constants';
 export const userApi = createApi({
     reducerPath: 'userApi',
     // Note: Firebase RTDB uses ?auth=TOKEN for authenticated requests
-    // For mutations, we'll add auth in the queryFn where needed
-    baseQuery: fetchBaseQuery({
-        baseUrl: BASE_URL,
-        prepareHeaders: (headers) => {
-            headers.set('Content-Type', 'application/json');
-            return headers;
+    // Wrap baseQuery asyncedly to dynamically append token from Redux state to URL params for REST operations.
+    baseQuery: async (args, api, extraOptions) => {
+        const token = api.getState().auth.token;
+        let urlArg = typeof args === 'string' ? args : args.url;
+        
+        if (token) {
+            urlArg += urlArg.includes('?') ? `&auth=${token}` : `?auth=${token}`;
         }
-    }),
+        
+        const modifiedArgs = typeof args === 'string' ? urlArg : { ...args, url: urlArg };
+        
+        const rawBaseQuery = fetchBaseQuery({
+            baseUrl: BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`,
+            prepareHeaders: (headers) => {
+                headers.set('Content-Type', 'application/json');
+                return headers;
+            }
+        });
+        
+        return rawBaseQuery(modifiedArgs, api, extraOptions);
+    },
     tagTypes: ['Profile', 'Favorites'],
     endpoints: (builder) => ({
         /** Fetches complete user profile from Firebase */
@@ -27,19 +40,28 @@ export const userApi = createApi({
 
         /** Updates profile image with Offline Fallback */
         updateProfileImage: builder.mutation({
-            queryFn: async ({ localId, image }) => {
+            queryFn: async ({ localId, image }, { getState }) => {
                 const endpoint = `users/${localId}/profileImage.json`;
                 const method = 'PUT';
                 const body = JSON.stringify(image);
 
                 try {
-                    const response = await fetch(`${BASE_URL}${endpoint}`, { method, body });
-                    if (!response.ok) throw new Error('Network Error');
+                    const token = getState().auth.token;
+                    const cleanBaseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+                    const url = token ? `${cleanBaseUrl}${endpoint}?auth=${token}` : `${cleanBaseUrl}${endpoint}`;
+                    
+                    const response = await fetch(url, { 
+                        method, 
+                        body,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     return { data: await response.json() };
                 } catch (e) {
                     console.warn("Sentinel: Queuing Profile Image Update");
                     const { enqueueMutation } = require('../db');
-                    await enqueueMutation(endpoint, method, image); // Store raw value, SyncManager stringifies payload
+                    await enqueueMutation(endpoint, method, image);
                     return { data: image };
                 }
             },
@@ -48,17 +70,21 @@ export const userApi = createApi({
 
         /** Updates user location with Offline Fallback */
         updateUserLocation: builder.mutation({
-            queryFn: async ({ localId, location }) => {
+            queryFn: async ({ localId, location }, { getState }) => {
                 const endpoint = `users/${localId}/location.json`;
                 const method = 'PUT';
 
                 try {
-                    const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    const token = getState().auth.token;
+                    const cleanBaseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+                    const url = token ? `${cleanBaseUrl}${endpoint}?auth=${token}` : `${cleanBaseUrl}${endpoint}`;
+                    
+                    const response = await fetch(url, {
                         method,
                         body: JSON.stringify(location),
                         headers: { 'Content-Type': 'application/json' }
                     });
-                    if (!response.ok) throw new Error('Network Error');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     return { data: await response.json() };
                 } catch (e) {
                     console.warn("Sentinel: Queuing Location Update");
@@ -102,16 +128,23 @@ export const userApi = createApi({
 
         /** Updates theme preference with Offline Fallback */
         updateThemePreference: builder.mutation({
-            queryFn: async ({ localId, themePreference }) => {
+            queryFn: async ({ localId, themePreference }, { getState }) => {
                 const endpoint = `users/${localId}/themePreference.json`;
                 const method = 'PUT';
-                // Firebase needs stringified primitive manually sometimes, but for PUT on a node it's usually automatic if standard JSON.
-                // However, our original code did JSON.stringify(themePreference).
                 const body = JSON.stringify(themePreference);
 
                 try {
-                    const response = await fetch(`${BASE_URL}${endpoint}`, { method, body });
-                    if (!response.ok) throw new Error('Network Error');
+                    const token = getState().auth.token;
+                    const cleanBaseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+                    const url = token ? `${cleanBaseUrl}${endpoint}?auth=${token}` : `${cleanBaseUrl}${endpoint}`;
+                    
+                    const response = await fetch(url, { 
+                        method, 
+                        body,
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     return { data: await response.json() };
                 } catch (e) {
                     console.warn("Sentinel: Queuing Theme Update");

@@ -4,12 +4,6 @@
  * @description Centralized data access layer for TechZone e-commerce operations.
  * Handles interactions with Firebase Realtime Database for products, categories,
  * orders, and reviews.
- * 
- * @architectural_note
- * Uses Redux Toolkit Query (RTKQ) for:
- * 1. Automatic Caching & Deduplication
- * 2. Optimistic Updates for UI responsiveness
- * 3. Background Polling to keep data fresh
  */
 
 import { createApi, fetchBaseQuery, retry } from '@reduxjs/toolkit/query/react';
@@ -17,15 +11,31 @@ import { BASE_URL } from '../global/constants';
 
 // Create a base query with retry logic
 // Note: Firebase RTDB uses ?auth=TOKEN not Authorization header
-// For public read endpoints, no auth needed if Firebase rules allow
-const baseQuery = fetchBaseQuery({
-    baseUrl: BASE_URL,
+const rawBaseQuery = fetchBaseQuery({
+    baseUrl: BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`,
     prepareHeaders: (headers) => {
         headers.set('Content-Type', 'application/json');
         return headers;
     }
 });
-const baseQueryWithRetry = retry(baseQuery, { maxRetries: 3 });
+
+/**
+ * @function customBaseQuery
+ * @description Dynamically appends the auth token to Firebase URL parameters.
+ */
+const customBaseQuery = async (args, api, extraOptions) => {
+    const token = api.getState().auth.token;
+    let urlArg = typeof args === 'string' ? args : args.url;
+    
+    if (token) {
+        urlArg += urlArg.includes('?') ? `&auth=${token}` : `?auth=${token}`;
+    }
+    
+    const modifiedArgs = typeof args === 'string' ? urlArg : { ...args, url: urlArg };
+    return rawBaseQuery(modifiedArgs, api, extraOptions);
+};
+
+const baseQueryWithRetry = retry(customBaseQuery, { maxRetries: 3 });
 
 /**
  * @const shopApi
@@ -60,8 +70,6 @@ export const shopApi = createApi({
             transformResponse: (response) => {
                 if (!response) return [];
                 if (Array.isArray(response)) return response;
-                // Firebase returns object like {p1: {data}, p2: {data}}
-                // Convert to array with id included
                 return Object.entries(response).map(([id, data]) => ({
                     id: data.id || id,
                     ...data
@@ -79,9 +87,10 @@ export const shopApi = createApi({
          * @description Submits order with "Offline-First" fallback logic.
          */
         postOrder: builder.mutation({
-            queryFn: async (order) => {
+            queryFn: async (order, { getState }) => {
                 const endpoint = 'orders.json';
                 const method = 'POST';
+                const token = getState().auth.token;
                 const finalOrder = {
                     ...order,
                     status: 'pending',
@@ -89,19 +98,21 @@ export const shopApi = createApi({
                 };
 
                 try {
-                    const response = await fetch(`${BASE_URL}${endpoint}`, {
+                    const cleanBaseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+                    const url = token ? `${cleanBaseUrl}${endpoint}?auth=${token}` : `${cleanBaseUrl}${endpoint}`;
+
+                    const response = await fetch(url, {
                         method,
                         body: JSON.stringify(finalOrder),
                         headers: { 'Content-Type': 'application/json' }
                     });
 
-                    if (!response.ok) throw new Error('Network Error');
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.json();
                     return { data: { name: data.name } };
 
                 } catch (error) {
                     console.warn("Sentinel: Network failed, queuing mutation...", error);
-                    // Dynamic import to avoid circular dependencies
                     const { enqueueMutation } = require('../db');
                     await enqueueMutation(endpoint, method, finalOrder);
                     return { data: { name: `offline_${Date.now()}` }, meta: { isOffline: true } };

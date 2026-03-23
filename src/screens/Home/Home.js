@@ -45,11 +45,9 @@ const Home = ({ navigation }) => {
     const { width } = useWindowDimensions();
 
     // Selectors
-    const { selectedCategory, profileImage, isDarkMode } = useSelector(state => ({
-        selectedCategory: state.shop.selectedCategory,
-        profileImage: state.auth.profileImage,
-        isDarkMode: state.theme.isDarkMode
-    }));
+    const selectedCategory = useSelector(state => state.shop.selectedCategory);
+    const profileImage = useSelector(state => state.auth.profileImage);
+    const isDarkMode = useSelector(state => state.theme.isDarkMode);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [priceFilter, setPriceFilter] = useState({ min: 0, max: 9999 });
@@ -96,7 +94,7 @@ const Home = ({ navigation }) => {
         );
     }
 
-    if (isError) {
+    if (isError && (!products || products.length === 0)) {
         return (
             <SafeAreaView style={styles.centerContainer} edges={['top']}>
                 <Ionicons name="cloud-offline-outline" size={64} color={COLORS.cta} />
@@ -224,7 +222,7 @@ const Home = ({ navigation }) => {
                             />
                         </Animated.View>
                     )}
-                    ListHeaderComponent={renderHeader}
+                    ListHeaderComponent={renderHeader()}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <Ionicons name="cube-outline" size={64} color={isDarkMode ? COLORS.secondary : COLORS.secondary} />

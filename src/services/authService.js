@@ -39,7 +39,7 @@ export const signUp = async (email, password, name) => {
         // 3. Return Session
         return {
             email: user.email,
-            idToken: await user.getIdToken(),
+            token: await user.getIdToken(),
             localId: user.uid,
             displayName: name,
             role: 'user'
@@ -68,7 +68,7 @@ export const signIn = async (email, password) => {
 
         return {
             email: user.email,
-            idToken: token,
+            token: token,
             localId: user.uid,
             displayName: profile.name || user.displayName || 'User',
             role: profile.role || 'user',

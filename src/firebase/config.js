@@ -1,13 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence, getAuth, browserLocalPersistence } from 'firebase/auth'; // Auth with persistence
-import { getFirestore } from 'firebase/firestore'; // Database
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Storage for persistence
+import { getAuth, getReactNativePersistence, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-
-// Firebase configuration
-// TODO: Replace with actual project values from Firebase Console
-// Firebase configuration
 const firebaseConfig = {
     apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -17,7 +13,6 @@ const firebaseConfig = {
     appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-// CRITICAL: Validate Config to prevent startup crash
 const isConfigValid = !!firebaseConfig.apiKey;
 
 let app;
@@ -25,8 +20,7 @@ let auth;
 
 try {
     if (!isConfigValid) {
-        console.error("🔥 FIREBASE CONFIG MISSING: App running in safe mode. Check .env variables.");
-        // Initialize with dummy values to prevent 'undefined' crash, but Services will fail gracefully
+        console.error("🔥 FIREBASE CONFIG MISSING.");
         app = initializeApp({
             apiKey: "dummy-key",
             authDomain: "dummy.firebaseapp.com",
@@ -36,21 +30,20 @@ try {
         app = initializeApp(firebaseConfig);
     }
 
-    if (Platform.OS === 'web') {
-        auth = getAuth(app);
-        auth.setPersistence(browserLocalPersistence);
-    } else {
-        auth = initializeAuth(app, {
-            persistence: getReactNativePersistence(AsyncStorage)
-        });
-    }
+    auth = getAuth(app);
+    
+    const persistence = Platform.OS === 'web' 
+        ? browserLocalPersistence 
+        : getReactNativePersistence(AsyncStorage);
+        
+    setPersistence(auth, persistence).catch(err => {
+        console.error("🔥 FIREBASE PERSISTENCE FAILED:", err);
+    });
 
 } catch (error) {
     console.error("🔥 FIREBASE INIT FAILED:", error);
-    // Silent fail to allow app UI to render Error Boundary
 }
+
 const db = getFirestore(app);
 
 export { auth, db };
-
-

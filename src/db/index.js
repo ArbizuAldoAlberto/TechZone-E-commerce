@@ -188,7 +188,6 @@ export const clearPendingCartItems = async () => {
     try {
         const db = await getDb();
         if (db) await db.runAsync('DELETE FROM pending_cart_items;');
-        if (db) await db.runAsync('DELETE FROM pending_cart_items;');
     } catch (e) {
         console.error("Clear Pending Items Failed:", e);
     }

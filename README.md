@@ -1,142 +1,103 @@
-# TechZone: Elite E-Commerce Application
+# ⚡ TechZone: Elite E-Commerce Solution (Sentinel V2.1)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+![TechZone Banner](./assets/techzone-banner.png)
 
-> **Experience the Future of Mobile Shopping.**
-> TechZone is a premium, feature-rich e-commerce application built with React Native (Expo), Redux Toolkit, and Expo SQLite. It features offline support, 3D visualizations, and a sleek, glassmorphism-inspired UI.
+> **TechZone** is a high-performance, **Offline-First** mobile commerce platform built with **React Native (Expo)**. It integrates advanced synchronization logic, 3D product visualization, and an elite Glassmorphism UI to provide an industry-standard shopping experience.
 
 ---
 
-## 🚀 Features
+## 🚀 Key Engineering Highlights
 
-### 🌟 Core Experience
--   **Premium UI/UX**: Custom "Neo-Glass" design system, smooth animations (Reanimated), and 3D product interactions.
--   **Offline-First**: Browse previously cached products and place orders offline. They auto-sync when back online.
--   **Cross-Platform**: Optimized for Android, iOS, and Web.
+### 🛡️ Sentinel Sync Engine (V2.1)
+The core of TechZone is its custom **Sentinel Sync Engine**, designed for maximum resilience in low-connectivity environments:
+- **Offline Mutation Queue:** All user actions (Cart updates, Orders, Profile edits) are queued in a local **SQLite** database if the network is unavailable.
+- **Automatic Background Sync:** A headless `SyncManager` monitors connectivity via `NetInfo` and automatically flushes the mutation queue once a stable connection is restored.
+- **Conflict Resolution & Idempotency:** Implements a retry-and-purge strategy with `MAX_RETRIES` to handle transient network failures gracefully.
 
-### 🛍️ Shopping
--   **Dynamic Catalog**: Real-time product feed with category filtering and search.
--   **Smart Cart**: "The Purge" optimization handles abandoned items. Offline cart persistence via SQLite.
--   **Wishlist**: Save favorite items for later.
--   **Product 3D Viewer**: Interactive 3D models for featured products.
+### 💾 Hybrid Persistence Layer
+TechZone uses a dual-layer strategy for data integrity:
+1.  **Firebase (Auth/Firestore/RTD):** Distributed cloud backend for real-time synchronization.
+2.  **SQLite (Expo-SQLite):** Local source of truth for sessions, cart items, and order history caching.
+3.  **Redux Toolkit (RTK Query):** Advanced state management and caching with automatic re-validation of data.
 
-### 👤 User Features
--   **Authentication**: Secure login/signup flow.
--   **Profile Management**: Avatar customization and order history.
--   **Dark Mode**: Fully adaptive theme support.
-
----
-
-## 🛠️ Tech Stack
-
-### Frontend
--   **Framework**: React Native (Expo SDK 52)
--   **Language**: JavaScript (ES6+)
--   **Navigation**: React Navigation 7 (Native Stack + Bottom Tabs)
--   **State Management**: Redux Toolkit (RTK) + RTK Query
--   **UI Library**: Custom Component System (No external UI kits) + Reanimated 3
-
-### Backend / Persistence
--   **API**: Firebase Realtime Database (via RTK Query)
--   **Local DB**: Expo SQLite (Next-Gen) for offline persistence
--   **Storage**: Async Storage (Preferences)
-
-### Tools
--   **Build**: EAS Build (Expo Application Services)
--   **Linting**: ESLint + Prettier
+### 🎨 Elite UI/UX & Graphics
+- **3D Product Viewing:** Immersive 3D product previews using custom GL-based viewers.
+- **Glassmorphism Design:** Sophisticated UI layers with blur effects and transparency for a modern, "Elite" look.
+- **Reanimated 3.0:** Fluid layouts and physics-based animations throughout the navigation flow.
 
 ---
 
-## 📂 Project Structure
+## 🛠️ Technical Stack
 
-```bash
+- **Framework:** [React Native](https://reactnative.dev/) (Expo SDK 51)
+- **State Management:** [Redux Toolkit](https://redux-toolkit.js.org/) + [RTK Query](https://redux-toolkit.js.org/rtk-query/overview)
+- **Backend:** [Firebase](https://firebase.google.com/) (Auth, Realtime Database, Firestore)
+- **Database:** [SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) (Local Persistence)
+- **Animations:** [React Native Reanimated](https://docs.swmansion.com/react-native-reanimated/) & [Lottie](https://lottiereactnative.com/)
+- **Styling:** Centralized Theming with Dark Mode support.
+
+---
+
+## 📂 Project Architecture (Clean & Modular)
+
+```text
 src/
-├── app/               # App-wide services and hooks
-├── components/        # Reusable UI components
-│   ├── 3d/            # 3D models and scenes
-│   ├── common/        # Buttons, inputs, alerts
-│   ├── home/          # Home screen specific
-│   ├── product/       # Product details specific
-│   └── cart/          # Cart specific
-├── db/                # SQLite database layer (The Sentinel)
-├── navigation/        # Stack and Tab navigators
-├── screens/           # Main application screens (Home, Cart, Profile, etc.)
-├── services/          # RTK Query API definitions
-├── store/             # Redux slices and store config
-├── theme/             # Design tokens (Colors, Fonts, Spacing)
-└── utils/             # Helper functions
+├── app/             # Application Core (Hooks, SyncManager, Context)
+├── components/      # UI Components (3D, Common, Feature-specific)
+├── db/              # SQLite Database Schema & Persistence Layer
+├── firebase/        # Firebase Initialization & Cloud Config
+├── global/          # App-wide Constants, Colors, and Fonts
+├── navigation/      # React Navigation Stacks & Tab Controllers
+├── screens/         # Feature Screens (Auth, Home, Cart, Orders, Profile)
+├── services/        # RTK Query API Services (Shop, User, Auth)
+├── store/           # Redux Slices & Global State Store
+└── utils/           # Business Logic, Sanitization & Validations
 ```
 
 ---
 
-## ⚡ Getting Started
+## ⚙️ Installation & Setup
 
-### Prerequisites
--   Node.js (v18+)
--   Expo CLI (`npm install -g expo-cli`)
--   Android Studio / Xcode (for simulators)
-
-### Installation
-
-1.  **Clone the repository**
+1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/your-username/techzone.git
-    cd techzone
+    git clone https://github.com/ArbizuAldoAlberto/TechZone-E-commerce.git
+    cd TechZone-E-commerce
     ```
 
-2.  **Install dependencies**
+2.  **Install Dependencies:**
     ```bash
     npm install
-    # or
-    yarn install
     ```
 
-3.  **Run the app**
+3.  **Environment Variables:**
+    Create a `.env` file in the root directory based on `.env.example`:
+    ```env
+    EXPO_PUBLIC_FIREBASE_API_KEY=your_api_key
+    EXPO_PUBLIC_FIREBASE_URL=your_database_url
+    ...
+    ```
+
+4.  **Run the App:**
     ```bash
     npx expo start
     ```
-    -   Press `a` for Android
-    -   Press `i` for iOS
-    -   Press `w` for Web
 
 ---
 
-## 📦 Building for Production (APK)
+## 👤 Author & Contributions
 
-This project uses **EAS Build** for generating release binaries.
+**Aldo Arbizu Alberto** - *Lead Software Engineer / Architect*
 
-1.  **Configure EAS**
-    ```bash
-    eas build:configure
-    ```
-
-2.  **Build for Android (APK)**
-    ```bash
-    eas build --platform android --profile preview
-    # or local build
-    eas build --platform android --profile preview --local
-    ```
-
-The output `app-release.apk` can be installed directly on Android devices.
+- GitHub: [@ArbizuAldoAlberto](https://github.com/ArbizuAldoAlberto)
+- Portfolio: [Insert Portfolio Link]
+- LinkedIn: [Insert LinkedIn Link]
 
 ---
 
-## 🧪 Quality Assurance
-
--   **Code Quality**: Modularity is enforced via component extraction.
--   **Error Handling**: Global Error Boundary wraps the app to catch crashes.
--   **Performance**: `FlashList` and `useMemo` utilized for list optimization.
-
----
-
-## 📄 License
+## 📜 License & Security
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+**Security Note:** All sensitive credentials are managed via Expo environment variables and are never committed to the repository.
 
 ---
-
-<p align="center">
-  Built with ❤️ by <b>TechZone Engineering</b>
-</p>
+*Developed by Antigravity Studio — SO v7.1 Compliance*
