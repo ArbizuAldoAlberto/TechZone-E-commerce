@@ -58,19 +58,24 @@ const MainNavigator = () => {
                 const firebaseUser = await getFirebaseUser();
                 let { email, token, localId, profileImage, userLocation, themePreference } = session;
 
-                if (firebaseUser && firebaseUser.uid === localId) {
+                if (firebaseUser) {
                     try {
+                        // Force refresh token to ensure SyncManager has a valid credential
                         const freshToken = await firebaseUser.getIdToken(true);
-                        if (freshToken && freshToken !== token) {
-                            token = freshToken;
-                            await insertSession({ ...session, token: freshToken });
-                        }
+                        token = freshToken;
+                        
+                        // Update local DB with the fresh token
+                        await insertSession({ ...session, token: freshToken });
+                        
+                        // Sync Redux state
+                        dispatch(setUser({ email: firebaseUser.email, token: freshToken, localId: firebaseUser.uid }));
                     } catch (e) {
-                        console.warn('Sentinel: Token refresh failed.', e);
+                        console.error('Sentinel: Token refresh failed.', e);
                     }
+                } else if (token) {
+                    // Fallback to cached token if Firebase is initializing slowly
+                    dispatch(setUser({ email, token, localId }));
                 }
-
-                dispatch(setUser({ email, token, localId }));
 
                 // Local UI Update
                 if (profileImage) dispatch(setProfileImage(profileImage));

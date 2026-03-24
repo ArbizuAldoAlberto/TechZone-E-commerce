@@ -1,38 +1,56 @@
 /**
- * @fileoverview Theme Color Palettes (TechZone Elite)
- * @description Defines premium light and dark color schemes.
+ * @fileoverview Elite Color Palette for TechZone (SO v7.1 Edition)
+ * @description Centralized color management with optimized dark mode contrast.
  */
 
-export const lightColors = {
-    primary: '#CA8A04', // Gold
-    secondary: '#44403C', // Stone 700
-    background: '#FAFAF9', // Warm Off-white
-    cardBackground: '#FFFFFF',
-    text: '#1C1917', // Nearly Black
-    textLight: '#57534E', // Stone 500
+export const colors = {
+    // Core Brand
+    primary: '#0F172A',      // Midnight Slate
+    secondary: '#1E293B',    // Slate Deep
+    cta: '#06B6D4',          // Electric Cyan
+    accent: '#8B5CF6',       // Vivid Violet
+    
+    // Status & Feedback
+    success: '#10B981',      // Emerald Green
+    warning: '#F59E0B',      // Amber Gold
+    danger: '#EF4444',       // Rose Red
+    info: '#3B82F6',         // Royal Blue
+    
+    // UI Elements
+    background: '#020617',   // Deep Ocean (Perfect for OLED)
+    surface: '#0F172A',      // Card Surface
+    border: 'rgba(255, 255, 255, 0.08)',
+    glassBg: 'rgba(15, 23, 42, 0.7)',
+    glassBorder: 'rgba(255, 255, 255, 0.12)',
+    
+    // Typography
+    text: '#F8FAFC',         // White Slate
+    textLight: '#94A3B8',    // Muted Slate
     white: '#FFFFFF',
-    error: '#DC2626',
-    success: '#16A34A',
-    accent: '#CA8A04',
-    border: '#E7E5E4',
-    darkBackground: '#1C1917',
+    black: '#000000',
+    gray: '#64748B',
+    
+    // Special
+    skeleton: '#1E293B',
+    skeletonHighlight: '#334155'
 };
 
-export const darkColors = {
-    primary: '#CA8A04',
-    secondary: '#D6D3D1',
-    background: '#0C0A09', // Deep Dark
-    cardBackground: '#1C1917', // Stone 900
-    text: '#FAFAF9', // Off-white
-    textLight: '#A8A29E', // Stone 400
-    white: '#FFFFFF',
-    error: '#EF4444',
-    success: '#22C55E',
-    accent: '#FACC15',
-    border: '#292524',
-    darkBackground: '#000000',
+/**
+ * @function getColors
+ * @description Helper to dynamically select color schemes based on theme state.
+ */
+export const getColors = (isDarkMode) => {
+    if (isDarkMode) return colors;
+    
+    // Legacy Light Mode support if needed
+    return {
+        ...colors,
+        background: '#F1F5F9',
+        surface: '#FFFFFF',
+        text: '#0F172A',
+        textLight: '#475569',
+        border: 'rgba(0, 0, 0, 0.1)',
+        primary: '#FFFFFF',
+        secondary: '#F8FAFC'
+    };
 };
-
-export const colors = lightColors;
-
-export const getColors = (isDarkMode) => (isDarkMode ? darkColors : lightColors);

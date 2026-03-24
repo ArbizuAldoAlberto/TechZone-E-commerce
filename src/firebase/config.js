@@ -1,5 +1,10 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, getReactNativePersistence, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { 
+    initializeAuth, 
+    getReactNativePersistence, 
+    browserLocalPersistence, 
+    getAuth 
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -20,28 +25,28 @@ let auth;
 
 try {
     if (!isConfigValid) {
-        console.error("🔥 FIREBASE CONFIG MISSING.");
+        console.warn("🔥 FIREBASE CONFIG MISSING. Using dummy init.");
         app = initializeApp({
             apiKey: "dummy-key",
             authDomain: "dummy.firebaseapp.com",
             projectId: "dummy-project"
         });
+        auth = getAuth(app);
     } else {
         app = initializeApp(firebaseConfig);
-    }
-
-    auth = getAuth(app);
-    
-    const persistence = Platform.OS === 'web' 
-        ? browserLocalPersistence 
-        : getReactNativePersistence(AsyncStorage);
         
-    setPersistence(auth, persistence).catch(err => {
-        console.error("🔥 FIREBASE PERSISTENCE FAILED:", err);
-    });
+        // Initialize Auth with persistence based on Platform
+        auth = initializeAuth(app, {
+            persistence: Platform.OS === 'web' 
+                ? browserLocalPersistence 
+                : getReactNativePersistence(AsyncStorage)
+        });
+    }
 
 } catch (error) {
     console.error("🔥 FIREBASE INIT FAILED:", error);
+    // Fallback to basic auth if initialization fails
+    if (!auth) auth = getAuth(app);
 }
 
 const db = getFirestore(app);

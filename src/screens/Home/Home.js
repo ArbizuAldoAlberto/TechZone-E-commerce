@@ -196,12 +196,11 @@ const Home = ({ navigation }) => {
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: isDarkMode ? COLORS.background : '#F8FAFC' }]}>
             <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor="transparent" translucent />
 
-            {/* Background Layer - Dynamic */}
-            <View style={[styles.bgLayer, { backgroundColor: isDarkMode ? COLORS.primary : COLORS.background }]}>
-                {/* Re-using ParticlesBackground but ensuring it fits the new theme */}
+            {/* Background Layer - Dynamic Particles with Depth */}
+            <View style={styles.bgLayer}>
                 <ParticlesBackground />
             </View>
 
@@ -213,11 +212,21 @@ const Home = ({ navigation }) => {
                     numColumns={2}
                     removeClippedSubviews={true}
                     renderItem={({ item, index }) => (
-                        <Animated.View entering={FadeInUp.delay(index * 80).springify().damping(15)}>
+                        <Animated.View entering={FadeInUp.delay(index * 100).springify().damping(12)}>
                             <ProductItem
                                 product={item}
                                 onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                                containerStyle={[styles.gridItem, { width: (width - SPACING.lg * 2 - SPACING.md) / 2 }]}
+                                containerStyle={[
+                                    styles.gridItem, 
+                                    { 
+                                        width: (width - SPACING.lg * 2 - SPACING.md) / 2,
+                                        backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.4)' : COLORS.white,
+                                        borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                                        borderWidth: 1,
+                                        borderRadius: 24,
+                                        overflow: 'hidden'
+                                    }
+                                ]}
                                 isDarkMode={isDarkMode}
                             />
                         </Animated.View>

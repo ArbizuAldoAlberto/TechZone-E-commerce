@@ -32,6 +32,12 @@ const SyncManager = ({ children }) => {
     const { token } = useSelector(state => state.auth);
     const [isSyncing, setIsSyncing] = useState(false);
     const wasOffline = useRef(false);
+    
+    // Sentinel Security: Maintain a real-time reference to the auth token
+    const tokenRef = useRef(token);
+    useEffect(() => {
+        tokenRef.current = token;
+    }, [token]);
 
     // 1. Lifecycle Monitor (Connectivity + Auth Readiness)
     useEffect(() => {
@@ -126,11 +132,12 @@ const SyncManager = ({ children }) => {
     };
 
     const executeMutation = async (mutation) => {
-        if (!token) throw new Error("HTTP 401 - Unauthorized");
+        const currentToken = tokenRef.current;
+        if (!currentToken) throw new Error("HTTP 401 - Unauthorized");
 
         const cleanBaseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
         let url = `${cleanBaseUrl}${mutation.endpoint}`;
-        url += url.includes('?') ? `&auth=${token}` : `?auth=${token}`;
+        url += url.includes('?') ? `&auth=${currentToken}` : `?auth=${currentToken}`;
         
         const body = typeof mutation.payload === 'string' 
             ? mutation.payload 
